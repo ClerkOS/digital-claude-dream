@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import { FileViewer } from './FileViewer';
+import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -28,6 +30,8 @@ const mockResponses = [
   "Thanks for sharing that with me. Based on what you've described, I think the best approach would be:",
   "That's an interesting point. Let me provide you with a comprehensive answer:",
   "I see what you mean. Here's how I would approach this problem:",
+  "Here's a simple React component example:\n\n```tsx\nimport React from 'react';\n\nconst MyComponent = () => {\n  return (\n    <div className=\"p-4\">\n      <h1>Hello World!</h1>\n      <p>This is a sample component.</p>\n    </div>\n  );\n};\n\nexport default MyComponent;\n```\n\nThis component demonstrates basic JSX structure with Tailwind CSS classes.",
+  "I can help you with that! Here's a Python function:\n\n```python\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)\n\n# Example usage\nfor i in range(10):\n    print(f\"fib({i}) = {fibonacci(i)}\")\n```",
 ];
 
 const generateResponse = (userMessage: string): string => {
@@ -39,7 +43,13 @@ const generateResponse = (userMessage: string): string => {
     return "I'm here to help! I can assist with a wide variety of tasks including writing, analysis, math, coding, creative projects, and answering questions. What would you like to work on?";
   }
   if (userMessage.toLowerCase().includes('code') || userMessage.toLowerCase().includes('programming')) {
-    return "I'd be happy to help with coding! I can assist with various programming languages, debug code, explain concepts, or help design solutions. What programming task are you working on?";
+    return mockResponses[6]; // Return the code example
+  }
+  if (userMessage.toLowerCase().includes('python')) {
+    return mockResponses[7]; // Return the Python example
+  }
+  if (userMessage.toLowerCase().includes('react') || userMessage.toLowerCase().includes('component')) {
+    return mockResponses[6]; // Return the React example
   }
   
   // Random response for other messages
@@ -92,6 +102,13 @@ export function ChatInterface() {
   ]);
   const [activeConversationId, setActiveConversationId] = useState<string>('1');
   const [isTyping, setIsTyping] = useState(false);
+  const [fileViewerOpen, setFileViewerOpen] = useState(false);
+  const [currentFile, setCurrentFile] = useState<{
+    name: string;
+    content: string;
+    type: 'text' | 'code' | 'image' | 'markdown';
+    language?: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
@@ -163,8 +180,13 @@ export function ChatInterface() {
     setSidebarOpen(false);
   };
 
+  const handleViewFile = (file: { name: string; content: string; type: 'text' | 'code' | 'image' | 'markdown'; language?: string; }) => {
+    setCurrentFile(file);
+    setFileViewerOpen(true);
+  };
+
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background relative">
       <ChatSidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -178,7 +200,10 @@ export function ChatInterface() {
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300",
+        fileViewerOpen ? "mr-0 lg:mr-[50%] xl:mr-[40%]" : ""
+      )}>
         {/* Header */}
         <div className="border-b border-border p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex items-center gap-3">
@@ -225,6 +250,7 @@ export function ChatInterface() {
                     content={message.content}
                     role={message.role}
                     timestamp={message.timestamp}
+                    onViewFile={handleViewFile}
                   />
                 ))}
                 
@@ -254,6 +280,13 @@ export function ChatInterface() {
         {/* Input Area */}
         <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
       </div>
+
+      {/* File Viewer */}
+      <FileViewer
+        isOpen={fileViewerOpen}
+        onClose={() => setFileViewerOpen(false)}
+        file={currentFile}
+      />
     </div>
   );
 }
