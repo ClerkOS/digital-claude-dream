@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, FileText, Eye } from 'lucide-react';
+import { Copy, Check, FileText, Eye, Code, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -59,27 +59,45 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
         );
       }
 
-      // Add code block with view button
+      // Add collapsed file block (like Claude AI)
+      const codePreview = code.trim().split('\n')[0].slice(0, 50) + (code.trim().split('\n')[0].length > 50 ? '...' : '');
+      const lineCount = code.trim().split('\n').length;
+      
+      // Determine if this is an Excel/CSV file based on content or language
+      const isExcelFile = language === 'csv' || 
+                         language === 'excel' || 
+                         code.includes(',') && code.split('\n').length > 1 && 
+                         code.split('\n')[0].split(',').length > 1;
+      
+      const fileIcon = isExcelFile ? FileSpreadsheet : Code;
+      const fileType = isExcelFile ? 'Excel/CSV file' : (language ? `${language} file` : 'Code file');
+      const iconBg = isExcelFile ? 'bg-green-500/10' : 'bg-primary/10';
+      const iconColor = isExcelFile ? 'text-green-600' : 'text-primary';
+      
       parts.push(
-        <div key={`code-${index}`} className="my-3 relative group">
-          <div className="bg-muted/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
-            {language && (
-              <div className="flex items-center justify-between mb-2 pb-2 border-b border-border">
-                <span className="text-xs text-muted-foreground">{language}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleViewFile(code.trim(), language)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-xs h-6"
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  View
-                </Button>
+        <div key={`code-${index}`} className="my-3">
+          <div 
+            className="bg-muted/30 border border-border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleViewFile(code.trim(), language)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 ${iconBg} rounded-md flex items-center justify-center`}>
+                  <fileIcon className={`h-4 w-4 ${iconColor}`} />
+                </div>
+                <div>
+                  <div className="font-medium text-foreground">
+                    {fileType}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {lineCount} line{lineCount !== 1 ? 's' : ''} • {codePreview}
+                  </div>
+                </div>
               </div>
-            )}
-            <pre className="whitespace-pre-wrap break-words">
-              <code>{code.trim()}</code>
-            </pre>
+              <div className="text-sm text-muted-foreground">
+                Click to view
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -119,7 +137,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
   return (
     <div className="flex justify-start mb-6">
       <div className="flex gap-3 max-w-[85%]">
-        {/* Claude Avatar */}
+        {/* Clerk Avatar */}
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
           <span className="text-white font-bold text-xs">C</span>
         </div>
@@ -149,7 +167,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
           </div>
           
           <div className="text-xs text-muted-foreground mt-1">
-            Claude • {timestamp}
+            Clerk • {timestamp}
           </div>
         </div>
       </div>

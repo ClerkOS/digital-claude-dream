@@ -51,7 +51,7 @@ export function ChatSidebar({
             <div className="w-6 h-6 bg-gradient-to-br from-primary to-primary/80 rounded-md flex items-center justify-center">
               <span className="text-white font-bold text-sm">C</span>
             </div>
-            <span className="font-semibold text-foreground">Claude</span>
+            <span className="font-semibold text-foreground">Clerk</span>
           </div>
           <Button
             variant="ghost"
