@@ -1,27 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-// import { Menu } from 'lucide-react';
-// import { Button } from '@/components/ui/button';
-// import { ChatSidebar } from './ChatSidebar';
+import { motion } from 'framer-motion';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChatSidebar } from './ChatSidebar';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { FileViewer } from './FileViewer';
 import ExcelViewer from './ExcelViewer';
 import { cn } from '@/lib/utils';
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: string;
-}
-
-interface Conversation {
-  id: string;
-  title: string;
-  timestamp: string;
-  preview: string;
-  messages: Message[];
-}
+import { Message, Conversation } from '@/types/chat';
 
 // Mock responses from Clerk
 const mockResponses = [
@@ -67,7 +54,7 @@ const generateResponse = (userMessage: string): string => {
 };
 
 export function ChatInterface() {
-  // const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([
     {
       id: '1',
@@ -177,19 +164,19 @@ export function ChatInterface() {
     }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
   };
 
-  // const handleNewConversation = () => {
-  //   const newConversation: Conversation = {
-  //     id: Date.now().toString(),
-  //     title: 'New conversation',
-  //     timestamp: 'Now',
-  //     preview: 'Start a new conversation...',
-  //     messages: [],
-  //   };
+  const handleNewConversation = () => {
+    const newConversation: Conversation = {
+      id: Date.now().toString(),
+      title: 'New conversation',
+      timestamp: 'Now',
+      preview: 'Start a new conversation...',
+      messages: [],
+    };
 
-  //   setConversations(prev => [newConversation, ...prev]);
-  //   setActiveConversationId(newConversation.id);
-  //   setSidebarOpen(false);
-  // };
+    setConversations(prev => [newConversation, ...prev]);
+    setActiveConversationId(newConversation.id);
+    setSidebarOpen(false);
+  };
 
   const handleViewFile = (file: { name: string; content: string; type: 'text' | 'code' | 'image' | 'markdown'; language?: string; }) => {
     setCurrentFile(file);
@@ -202,41 +189,44 @@ export function ChatInterface() {
     
     if (isExcelFile) {
       setExcelViewerOpen(true);
+      setSidebarOpen(false); // Close left sidebar when opening Excel viewer
     } else {
-    setFileViewerOpen(true);
+      setFileViewerOpen(true);
     }
+  };
+
+  const handleCloseExcelViewer = () => {
+    setExcelViewerOpen(false);
+    setSidebarOpen(true); // Reopen left sidebar when closing Excel viewer
   };
 
   return (
     <div className="flex h-screen bg-background relative">
-      {/* <ChatSidebar
-        isOpen={sidebarOpen}
+      <ChatSidebar
+        isOpen={sidebarOpen && !excelViewerOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
-        conversations={conversations}
-        activeConversationId={activeConversationId}
-        onSelectConversation={(id) => {
-          setActiveConversationId(id);
-          setSidebarOpen(false);
-        }}
         onNewConversation={handleNewConversation}
-      /> */}
+      />
 
       {/* Main Chat Area */}
-      <div className={cn(
-        "flex-1 flex flex-col transition-all duration-300",
-        fileViewerOpen ? "mr-0 lg:mr-[50%] xl:mr-[40%]" : ""
-      )}>
+      <motion.div 
+        className="flex-1 flex flex-col transition-all duration-300"
+        animate={{
+          width: excelViewerOpen ? "50%" : "100%"
+        }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      >
         {/* Header */}
         <div className="border-b border-border p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex items-center gap-3">
-            {/* <Button
+            <Button
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden"
             >
               <Menu className="h-5 w-5" />
-            </Button> */}
+            </Button>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">C</span>
@@ -251,7 +241,11 @@ export function ChatInterface() {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className={`max-w-4xl mx-auto py-6 transition-all duration-300 ${
+            excelViewerOpen 
+              ? 'px-12 lg:px-16' // Much more padding when Excel viewer is open
+              : 'px-8 lg:px-12'  // More padding when closed
+          }`}>
             {!activeConversation?.messages.length ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-16">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center mb-4">
@@ -301,19 +295,21 @@ export function ChatInterface() {
 
         {/* Input Area */}
         <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
-      </div>
+      </motion.div>
+
+      {/* Excel Viewer - Part of flex layout */}
+      {excelViewerOpen && (
+        <ExcelViewer
+          isOpen={excelViewerOpen}
+          onClose={handleCloseExcelViewer}
+          file={currentFile}
+        />
+      )}
 
       {/* File Viewer */}
       <FileViewer
         isOpen={fileViewerOpen}
         onClose={() => setFileViewerOpen(false)}
-        file={currentFile}
-      />
-
-      {/* Excel Viewer */}
-      <ExcelViewer
-        isOpen={excelViewerOpen}
-        onClose={() => setExcelViewerOpen(false)}
         file={currentFile}
       />
     </div>

@@ -119,7 +119,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
 
   if (role === 'user') {
     return (
-      <div className="flex justify-end mb-6">
+      <div className="flex justify-end mb-6 pr-8">
         <div className="max-w-[70%]">
           <div className="bg-primary text-white rounded-2xl rounded-br-md px-4 py-3">
             <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -135,7 +135,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
   }
 
   return (
-    <div className="flex justify-start mb-6">
+    <div className="flex justify-start mb-6 pl-8">
       <div className="flex gap-3 max-w-[85%]">
         {/* Clerk Avatar */}
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
@@ -143,7 +143,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
         </div>
 
         <div className="flex-1">
-          <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 relative group">
+          <div className="px-4 py-3 relative group">
             <div className="text-sm leading-relaxed text-foreground">
               {renderContentWithCodeBlocks(content)}
             </div>

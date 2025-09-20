@@ -1,30 +1,16 @@
-import { useState } from 'react';
-import { Plus, MessageSquare, Settings, User, Menu, X } from 'lucide-react';
+import { Plus, MessageSquare, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-interface Conversation {
-  id: string;
-  title: string;
-  timestamp: string;
-  preview: string;
-}
 
 interface ChatSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
-  conversations: Conversation[];
-  activeConversationId: string | null;
-  onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
 }
 
 export function ChatSidebar({
   isOpen,
   onToggle,
-  conversations,
-  activeConversationId,
-  onSelectConversation,
   onNewConversation,
 }: ChatSidebarProps) {
   return (
@@ -40,84 +26,43 @@ export function ChatSidebar({
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed left-0 top-0 h-full bg-white border-r border-border z-50 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
+          "fixed left-0 top-0 h-full bg-background border-r border-border z-50 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
-          "w-80 flex flex-col"
+          "w-16 flex flex-col items-center py-4"
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-primary to-primary/80 rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-sm">C</span>
-            </div>
-            <span className="font-semibold text-foreground">Clerk</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className="lg:hidden"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+        {/* Logo/Brand */}
+        <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-md flex items-center justify-center mb-8">
+          <span className="text-white font-bold text-sm">C</span>
         </div>
 
-        {/* New Chat Button */}
-        <div className="p-4">
+        {/* Main Actions */}
+        <div className="flex flex-col items-center gap-4 flex-1">
+          {/* New Conversation Button */}
           <Button
             onClick={onNewConversation}
-            className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-white"
+            size="icon"
+            className="w-10 h-10 bg-primary hover:bg-primary/90 text-white rounded-full"
           >
-            <Plus className="h-4 w-4" />
-            New conversation
+            <Plus className="h-5 w-5" />
           </Button>
-        </div>
 
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto px-2">
-          <div className="space-y-1">
-            {conversations.map((conversation) => (
-              <button
-                key={conversation.id}
-                onClick={() => onSelectConversation(conversation.id)}
-                className={cn(
-                  "w-full text-left p-3 rounded-lg transition-colors hover:bg-muted/50",
-                  activeConversationId === conversation.id
-                    ? "bg-muted"
-                    : "transparent"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm text-foreground truncate">
-                      {conversation.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {conversation.preview}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {conversation.timestamp}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
+          {/* Chat/Conversation Icon (Decorative) */}
+          <div className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors cursor-pointer">
+            <MessageSquare className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
 
         {/* Bottom Actions */}
-        <div className="border-t border-border p-4">
-          <div className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <User className="h-4 w-4" />
-              Account
-            </Button>
+        <div className="flex flex-col items-center gap-4">
+          {/* Settings Icon */}
+          <div className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors cursor-pointer">
+            <Settings className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          {/* Account Icon */}
+          <div className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors cursor-pointer">
+            <User className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
       </div>
