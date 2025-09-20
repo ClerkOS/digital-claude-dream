@@ -119,8 +119,58 @@ export function ChatInterface() {
     scrollToBottom();
   }, [activeConversation?.messages, isTyping]);
 
-  const handleSendMessage = async (content: string) => {
+  const readFileContent = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        
+        if (file.type.includes('pdf')) {
+          resolve(`PDF file uploaded: ${file.name}\nSize: ${(file.size / 1024).toFixed(1)} KB\n\nNote: PDF content extraction would require additional processing.`);
+        } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
+          // For Excel files, we'll show a preview of the content
+          resolve(`Excel file uploaded: ${file.name}\nSize: ${(file.size / 1024).toFixed(1)} KB\n\nNote: Excel content can be viewed in the spreadsheet viewer.`);
+        } else {
+          resolve(`File uploaded: ${file.name}\nSize: ${(file.size / 1024).toFixed(1)} KB`);
+        }
+      };
+      
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
+  const handleSendMessage = async (content: string, files?: any[]) => {
     if (!activeConversationId) return;
+
+    // Handle file uploads
+    if (files && files.length > 0) {
+      for (const fileData of files) {
+        const file = fileData.file;
+        const fileContent = await readFileContent(file);
+        
+        // Create a file message
+        const fileMessage: Message = {
+          id: Date.now().toString() + '_file',
+          content: `📎 **${file.name}** (${file.type.includes('pdf') ? 'PDF' : 'Excel'})\n\n${fileContent}`,
+          role: 'user',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        // Add file message
+        setConversations(prev => prev.map(conv => 
+          conv.id === activeConversationId 
+            ? { 
+                ...conv, 
+                messages: [...conv.messages, fileMessage],
+                preview: `📎 ${file.name}`,
+                timestamp: 'Just now'
+              }
+            : conv
+        ));
+      }
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
