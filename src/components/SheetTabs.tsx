@@ -77,7 +77,7 @@ export function SheetTabs({ className }: SheetTabsProps) {
   };
 
   return (
-    <div className={`flex items-center gap-1 p-2 border-t bg-card ${className}`}>
+    <div className={`flex items-center gap-1 p-3 border-t bg-card ${className}`}>
       <div className="flex items-center gap-1 overflow-x-auto">
         <AnimatePresence>
           {workbook.sheets.map((sheet, index) => (

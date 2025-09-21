@@ -126,7 +126,7 @@ function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
           <FormulaBar />
 
           {/* Spreadsheet Content */}
-          <div className="flex-1 overflow-hidden bg-background">
+          <div className="flex-1 overflow-hidden bg-background flex flex-col">
             {isLoading ? (
               <div className="flex items-center justify-center h-64 text-muted-foreground">
                 <div className="text-center">
@@ -137,9 +137,9 @@ function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
                 </div>
               </div>
             ) : workbook ? (
-              <div className="h-full flex flex-col">
+              <>
                 {/* Spreadsheet Grid */}
-                <div className="flex-1 p-4 pb-2">
+                <div className="flex-1 p-4 pb-2 min-h-0">
                   <SpreadsheetGrid className="h-full" />
                 </div>
                 
@@ -147,7 +147,7 @@ function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
                 <div className="flex-shrink-0">
                   <SheetTabs />
                 </div>
-              </div>
+              </>
             ) : (
               <div className="flex items-center justify-center h-64 text-muted-foreground">
                 <div className="text-center">

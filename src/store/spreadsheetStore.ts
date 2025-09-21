@@ -110,31 +110,39 @@ const createWorkbookFromCSV = (name: string, content: string): Workbook => {
   const { headers, rows } = parseCSVContent(content);
   const now = new Date().toISOString();
   
-  // Create cells for each row
-  const sheetRows: Row[] = rows.map((rowData, rowIndex) => {
-    const cells: Cell[] = headers.map((_, colIndex) => ({
-      id: createCellId(rowIndex, colIndex),
-      value: rowData[colIndex] || '',
-      type: 'text'
-    }));
+  // Calculate data bounds
+  const dataRowCount = Math.max(rows.length, 1); // At least 1 row
+  const dataColCount = Math.max(headers.length, 1); // At least 1 column
+  
+  // Extend with 2 additional columns and 5 additional rows
+  const extendedRowCount = dataRowCount + 5;
+  const extendedColCount = dataColCount + 2;
+  
+  // Create cells for each row (including extended rows)
+  const sheetRows: Row[] = Array.from({ length: extendedRowCount }, (_, rowIndex) => {
+    const cells: Cell[] = Array.from({ length: extendedColCount }, (_, colIndex) => {
+      // If this is within the original data bounds, use the data
+      if (rowIndex < dataRowCount && colIndex < dataColCount) {
+        const rowData = rows[rowIndex] || [];
+        return {
+          id: createCellId(rowIndex, colIndex),
+          value: rowData[colIndex] || '',
+          type: 'text'
+        };
+      }
+      // Otherwise, create empty cells
+      return {
+        id: createCellId(rowIndex, colIndex),
+        value: '',
+        type: 'text'
+      };
+    });
     
     return {
       id: `row-${rowIndex}`,
       cells
     };
   });
-  
-  // Ensure we have at least one row
-  if (sheetRows.length === 0) {
-    sheetRows.push({
-      id: 'row-0',
-      cells: headers.map((_, colIndex) => ({
-        id: createCellId(0, colIndex),
-        value: '',
-        type: 'text'
-      }))
-    });
-  }
   
   const sheet: Sheet = {
     id: 'sheet-1',
@@ -187,17 +195,19 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
         if (!state.workbook) return state;
         
         const now = new Date().toISOString();
+        
+        // Create a new sheet with 6 rows (1 + 5 extension) and 3 columns (1 + 2 extension)
         const newSheet: Sheet = {
           id: `sheet-${Date.now()}`,
           name,
-          rows: [{
-            id: 'row-0',
-            cells: Array.from({ length: 26 }, (_, colIndex) => ({
-              id: createCellId(0, colIndex),
+          rows: Array.from({ length: 6 }, (_, rowIndex) => ({
+            id: `row-${rowIndex}`,
+            cells: Array.from({ length: 3 }, (_, colIndex) => ({
+              id: createCellId(rowIndex, colIndex),
               value: '',
               type: 'text'
             }))
-          }],
+          })),
           createdAt: now,
           updatedAt: now
         };
@@ -241,15 +251,12 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
           name: `${sheetToDuplicate.name} Copy`,
           createdAt: now,
           updatedAt: now,
-          rows: sheetToDuplicate.rows.map(row => ({
+          rows: sheetToDuplicate.rows.map((row, rowIndex) => ({
             ...row,
-            id: `row-${Date.now()}-${Math.random()}`,
-            cells: row.cells.map(cell => ({
+            id: `row-${rowIndex}`,
+            cells: row.cells.map((cell, colIndex) => ({
               ...cell,
-              id: createCellId(
-                parseInt(cell.id.split('-')[1]),
-                parseInt(cell.id.split('-')[2])
-              )
+              id: createCellId(rowIndex, colIndex)
             }))
           }))
         };

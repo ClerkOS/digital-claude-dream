@@ -18,8 +18,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 20 14.3% 4.1%;
 
-    /* Claude's orange-red primary color */
-    --primary: 20 100% 55%;
+    /* Blue primary color */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 98%;
 
     --secondary: 0 0% 96.1%;
@@ -36,18 +36,18 @@ All colors MUST be HSL.
 
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 20 100% 55%;
+    --ring: 217 91% 60%;
 
     --radius: 0.75rem;
 
     /* Chat specific colors */
     --chat-sidebar: 0 0% 98%;
-    --chat-user-message: 20 100% 55%;
+    --chat-user-message: 217 91% 60%;
     --chat-assistant-message: 0 0% 100%;
     --chat-input-bg: 0 0% 100%;
     
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(20, 100%, 55%), hsl(20, 100%, 60%));
+    --gradient-primary: linear-gradient(135deg, hsl(217, 91%, 60%), hsl(217, 91%, 65%));
     --gradient-bg: linear-gradient(135deg, hsl(0, 0%, 100%), hsl(0, 0%, 98%));
   }
 
@@ -61,7 +61,7 @@ All colors MUST be HSL.
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 20 100% 55%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 98%;
 
     --secondary: 0 0% 14.9%;
@@ -78,16 +78,16 @@ All colors MUST be HSL.
 
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 20 100% 55%;
+    --ring: 217 91% 60%;
 
     /* Chat specific dark colors */
     --chat-sidebar: 0 0% 6%;
-    --chat-user-message: 20 100% 55%;
+    --chat-user-message: 217 91% 60%;
     --chat-assistant-message: 0 0% 8%;
     --chat-input-bg: 0 0% 8%;
     
     /* Dark gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(20, 100%, 55%), hsl(20, 100%, 60%));
+    --gradient-primary: linear-gradient(135deg, hsl(217, 91%, 60%), hsl(217, 91%, 65%));
     --gradient-bg: linear-gradient(135deg, hsl(0, 0%, 3.9%), hsl(0, 0%, 6%));
   }
 }
