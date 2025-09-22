@@ -1,11 +1,11 @@
-# Clerk - AI for Accounting
+# Ledgr - AI for Accounting
 
-Clerk is an AI-powered accounting automation platform that helps organizations streamline their financial processes through intelligent data processing and analysis.
+Ledgr is an AI-powered accounting automation platform that helps organizations streamline their financial processes through intelligent data processing and analysis.
 
 ## Features
 
 ### Automatic Data Processing
-When you upload your financial data, Clerk automatically:
+When you upload your financial data, Ledgr automatically:
 
 - **Organization**: Cleans and normalizes transactions for accurate processing
 - **Ledger**: Generates journal entries and maintains a comprehensive general ledger
@@ -62,7 +62,7 @@ npm run build
 
 ## AI Accounting Capabilities
 
-Clerk leverages advanced AI to provide:
+Ledgr leverages advanced AI to provide:
 
 - **Transaction Normalization**: Automatically categorizes and standardizes financial data
 - **Journal Entry Generation**: Creates accurate journal entries based on transaction patterns

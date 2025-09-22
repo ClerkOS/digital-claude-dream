@@ -33,7 +33,7 @@ export function ChatSidebar({
       >
         {/* Logo/Brand */}
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-md flex items-center justify-center mb-8">
-          <span className="text-white font-bold text-sm">C</span>
+          <span className="text-white font-bold text-sm">L</span>
         </div>
 
         {/* Main Actions */}

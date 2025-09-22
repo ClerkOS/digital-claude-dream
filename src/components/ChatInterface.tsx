@@ -10,7 +10,7 @@ import ExcelViewer from './ExcelViewer';
 import { cn } from '@/lib/utils';
 import { Message, Conversation } from '@/types/chat';
 
-// Mock responses from Clerk
+// Mock responses from Ledgr
 const mockResponses = [
   "I'd be happy to help you with your accounting needs! Could you provide more details about what you're looking for?",
   "That's a great accounting question. Let me analyze this step by step...",
@@ -25,7 +25,7 @@ const mockResponses = [
 const generateResponse = (userMessage: string): string => {
   // Simple response generation based on user input
   if (userMessage.toLowerCase().includes('hello') || userMessage.toLowerCase().includes('hi')) {
-    return "Hello! I'm Clerk, your AI accounting assistant. I can help you with transaction processing, ledger management, audit checks, and financial statements. How can I assist with your accounting needs today?";
+    return "Hello! I'm Ledgr, your AI accounting assistant. I can help you with transaction processing, ledger management, audit checks, and financial statements. How can I assist with your accounting needs today?";
   }
   if (userMessage.toLowerCase().includes('help')) {
     return "I'm here to help with your accounting needs! I can assist with transaction organization, journal entry generation, audit checks, financial statement preparation, and anomaly detection. What accounting task would you like to work on?";
@@ -58,9 +58,9 @@ export function ChatInterface() {
   const [conversations, setConversations] = useState<Conversation[]>([
     {
       id: '1',
-      title: 'Getting Started with Clerk',
+      title: 'Getting Started with Ledgr',
       timestamp: '2 hours ago',
-      preview: 'Hello! I\'m Clerk, your AI accounting assistant...',
+      preview: 'Hello! I\'m Ledgr, your AI accounting assistant...',
       messages: [
         {
           id: '1',
@@ -70,7 +70,7 @@ export function ChatInterface() {
         },
         {
           id: '2',
-          content: "Hello! I'm Clerk, your AI accounting assistant. I can help you with a wide variety of accounting tasks including:\n\n• Transaction organization and normalization\n• Journal entry generation\n• General ledger management\n• Audit checks and anomaly detection\n• Financial statement preparation\n• P&L, Cash Flow, and Payables/Receivables reports\n\nWhat accounting task would you like to work on today?",
+          content: "Hello! I'm Ledgr, your AI accounting assistant. I can help you with a wide variety of accounting tasks including:\n\n• Transaction organization and normalization\n• Journal entry generation\n• General ledger management\n• Audit checks and anomaly detection\n• Financial statement preparation\n• P&L, Cash Flow, and Payables/Receivables reports\n\nWhat accounting task would you like to work on today?",
           role: 'assistant',
           timestamp: '2:30 PM',
         },
@@ -279,10 +279,10 @@ export function ChatInterface() {
             </Button>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">C</span>
+                <span className="text-white font-bold text-sm">L</span>
               </div>
               <div>
-                <h1 className="font-semibold text-foreground">Clerk</h1>
+                <h1 className="font-semibold text-foreground">Ledgr</h1>
                 <p className="text-xs text-muted-foreground">AI for Accounting</p>
               </div>
             </div>
@@ -299,10 +299,10 @@ export function ChatInterface() {
             {!activeConversation?.messages.length ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-16">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-white font-bold text-xl">C</span>
+                  <span className="text-white font-bold text-xl">L</span>
                 </div>
                 <h2 className="text-2xl font-semibold text-foreground mb-2">
-                  Hello! I'm Clerk.
+                  Hello! I'm Ledgr.
                 </h2>
                 <p className="text-muted-foreground max-w-md">
                   I'm your AI accounting assistant. I can help you with transaction processing, ledger management, audit checks, financial statements, and more. How can I assist with your accounting needs today?
@@ -325,7 +325,7 @@ export function ChatInterface() {
                   <div className="flex justify-start mb-6">
                     <div className="flex gap-3">
                       <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <span className="text-white font-bold text-xs">C</span>
+                        <span className="text-white font-bold text-xs">L</span>
                       </div>
                       <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3">
                         <div className="flex gap-1">
