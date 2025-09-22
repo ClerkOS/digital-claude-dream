@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { Send, Paperclip, X, CheckCircle, Loader2, AlertCircle, BookOpen, FileText, TrendingUp, CreditCard, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { FileUpload } from '@/components/FileUpload';
 import { cn } from '@/lib/utils';
 
 interface UploadedFile {
@@ -57,27 +56,68 @@ const accountingQuickActions = [
 export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [showFileUpload, setShowFileUpload] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
     if ((message.trim() || uploadedFiles.length > 0) && !disabled) {
       onSendMessage(message.trim(), uploadedFiles);
       setMessage('');
       setUploadedFiles([]);
-      setShowFileUpload(false);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
     }
   };
 
-  const handleFilesUploaded = (files: UploadedFile[]) => {
-    setUploadedFiles(files);
-  };
 
   const handleQuickAction = (action: typeof accountingQuickActions[0]) => {
     onSendMessage(action.prompt);
+  };
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      // Process files similar to FileUpload component
+      const processedFiles: UploadedFile[] = files.map(file => ({
+        id: `file-${Date.now()}-${Math.random()}`,
+        file,
+        type: file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'xls',
+        isParsing: true,
+        isParsed: false
+      }));
+      
+      setUploadedFiles(prev => [...prev, ...processedFiles]);
+      
+      // Simulate parsing for each file
+      processedFiles.forEach(async (uploadedFile) => {
+        try {
+          // Simulate parsing delay
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+          
+          setUploadedFiles(prev => prev.map(f => 
+            f.id === uploadedFile.id 
+              ? { ...f, isParsing: false, isParsed: true, parsedData: { headers: ['Sample'], rows: [['Data']], totalRows: 1, totalColumns: 1 } }
+              : f
+          ));
+        } catch (error) {
+          setUploadedFiles(prev => prev.map(f => 
+            f.id === uploadedFile.id 
+              ? { ...f, isParsing: false, parseError: 'Failed to parse file' }
+              : f
+          ));
+        }
+      });
+    }
+    
+    // Reset the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -100,15 +140,6 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
   return (
     <div className="border-t border-border bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        {/* File Upload Section */}
-        {showFileUpload && (
-          <div className="mb-4">
-            <FileUpload 
-              onFilesUploaded={handleFilesUploaded}
-              maxFiles={3}
-            />
-          </div>
-        )}
 
         {/* Uploaded Files Preview */}
         {uploadedFiles.length > 0 && (
@@ -167,15 +198,22 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
         )}
 
         <div className="relative flex items-end gap-3 bg-card border border-border rounded-xl p-3">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".xls,.xlsx,.csv,.pdf"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          
           {/* Attachment button */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowFileUpload(!showFileUpload)}
-            className={cn(
-              "h-8 w-8 flex-shrink-0",
-              showFileUpload ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            )}
+            onClick={handleFileSelect}
+            className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground"
           >
             <Paperclip className="h-4 w-4" />
           </Button>

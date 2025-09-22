@@ -33,6 +33,10 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
 
   const activeSheet = workbook?.sheets.find(s => s.id === workbook.activeSheetId);
 
+  // Calculate actual column count based on data + 2 extension columns
+  const actualColumnCount = activeSheet?.rows[0]?.cells.length || 3; // Default to 3 if no data
+  const maxColumnCount = Math.min(actualColumnCount, 26); // Cap at Z (26 columns)
+
   // Virtualization math
   // -------------------------
   
@@ -99,7 +103,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
 
   // Update viewport in store when scroll changes
   useEffect(() => {
-    const endCol = Math.min(startCol + visibleCols, 26);
+    const endCol = Math.min(startCol + visibleCols, maxColumnCount);
     const endRow = Math.min(startRow + visibleRows, activeSheet?.rows.length || 100);
     
     setGridViewport({
@@ -108,7 +112,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
       startCol,
       endCol,
     });
-  }, [startRow, startCol, visibleRows, visibleCols, activeSheet?.rows.length, setGridViewport]);
+  }, [startRow, startCol, visibleRows, visibleCols, activeSheet?.rows.length, maxColumnCount, setGridViewport]);
 
   // Handle cell click
   const handleCellClick = useCallback((cellId: string) => {
@@ -156,7 +160,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
           break;
         case 'ArrowRight':
           e.preventDefault();
-          newColIndex = Math.min(25, colIndex + 1);
+          newColIndex = Math.min(maxColumnCount - 1, colIndex + 1);
           break;
         case 'Enter':
           e.preventDefault();
@@ -212,11 +216,11 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
           <div 
             className="flex"
             style={{ 
-              width: `${26 * CELL_WIDTH}px`,
+              width: `${maxColumnCount * CELL_WIDTH}px`,
               transform: `translateX(-${scroll.x}px)`
             }}
           >
-            {Array.from({ length: 26 }, (_, colIndex) => {
+            {Array.from({ length: maxColumnCount }, (_, colIndex) => {
               const header = String.fromCharCode(65 + colIndex);
               
               return (
@@ -275,7 +279,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
           {/* Total grid size for proper scrolling */}
           <div 
             style={{
-              width: `${26 * CELL_WIDTH}px`,
+              width: `${maxColumnCount * CELL_WIDTH}px`,
               height: `${(activeSheet?.rows.length || 100) * CELL_HEIGHT}px`,
               position: 'relative'
             }}
@@ -285,7 +289,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
               const { row, col } = cellPos;
               
               // Skip if outside valid range
-              if (row >= (activeSheet?.rows.length || 0) || col >= 26) {
+              if (row >= (activeSheet?.rows.length || 0) || col >= maxColumnCount) {
                 return null;
               }
 
