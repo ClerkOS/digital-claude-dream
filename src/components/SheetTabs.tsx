@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, X, Edit3, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
+import { listSheets, getSheet } from '@/lib/api/sheets';
 
 interface SheetTabsProps {
   className?: string;
@@ -23,17 +24,82 @@ export function SheetTabs({ className }: SheetTabsProps) {
     setActiveSheet, 
     addSheet, 
     removeSheet,
-    duplicateSheet
+    duplicateSheet,
+    setWorkbook
   } = useSpreadsheetStore();
 
-  if (!workbook || workbook.sheets.length === 0) {
+  const [backendSheetNames, setBackendSheetNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchSheets = async () => {
+      try {
+        if (workbook?.id) {
+          const names = await listSheets(workbook.id);
+          setBackendSheetNames(names);
+        } else {
+          setBackendSheetNames([]);
+        }
+      } catch (e) {
+        setBackendSheetNames([]);
+      }
+    };
+    fetchSheets();
+  }, [workbook?.id]);
+
+  if (!workbook || (backendSheetNames.length === 0 && workbook.sheets.length === 0)) {
     return null;
   }
 
-  const handleTabClick = (sheetId: string) => {
-    if (editingTab !== sheetId) {
-      setActiveSheet(sheetId);
+  const handleTabClick = async (sheetKey: string) => {
+    if (editingTab === sheetKey) return;
+    // If backend names are available, sheetKey is the name; fetch cells and set store
+    if (backendSheetNames.length && workbook?.id) {
+      try {
+        const data = await getSheet(workbook.id, sheetKey);
+        const entries = Object.entries(data.Cells || {});
+        const addresses = entries.map(([addr]) => addr);
+        const coords = addresses.map(addr => {
+          const m = addr.match(/([A-Z]+)(\d+)/);
+          if (!m) return { col: 1, row: 1 };
+          const colLetters = m[1];
+          const row = parseInt(m[2], 10);
+          const col = colLetters.split('').reduce((acc, ch) => acc * 26 + (ch.charCodeAt(0) - 64), 0);
+          return { col, row };
+        });
+        const maxCol = Math.max(1, ...coords.map(c => c.col));
+        const maxRow = Math.max(1, ...coords.map(c => c.row));
+        const rows = Array.from({ length: Math.max(maxRow, 1) }, (_, r) => ({
+          id: `row-${r}`,
+          cells: Array.from({ length: Math.max(maxCol, 1) }, (_, c) => ({ id: `cell-${r}-${c}`, value: '' }))
+        }));
+        for (const [addr, cell] of entries) {
+          const m = addr.match(/([A-Z]+)(\d+)/);
+          if (!m) continue;
+          const colLetters = m[1];
+          const rowIdx = parseInt(m[2], 10) - 1;
+          const colIdx = colLetters.split('').reduce((acc, ch) => acc * 26 + (ch.charCodeAt(0) - 64), 0) - 1;
+          if (rows[rowIdx] && rows[rowIdx].cells[colIdx]) {
+            rows[rowIdx].cells[colIdx].value = (cell as any).Value ?? '';
+          }
+        }
+        const now = new Date().toISOString();
+        const updated = {
+          id: workbook.id,
+          name: workbook.name,
+          sheets: [{ id: 'sheet-1', name: data.Name, rows, createdAt: now, updatedAt: now }],
+          activeSheetId: 'sheet-1',
+          createdAt: workbook.createdAt,
+          updatedAt: now
+        } as any;
+        setWorkbook(updated);
+        setActiveSheet('sheet-1');
+      } catch (e) {
+        // ignore for now
+      }
+      return;
     }
+    // Fallback to local sheets by id
+    setActiveSheet(sheetKey);
   };
 
   const handleTabDoubleClick = (sheetId: string, currentName: string) => {
@@ -80,9 +146,12 @@ export function SheetTabs({ className }: SheetTabsProps) {
     <div className={`flex items-center gap-1 p-3 border-t bg-card ${className}`}>
       <div className="flex items-center gap-1 overflow-x-auto">
         <AnimatePresence>
-          {workbook.sheets.map((sheet, index) => (
+          {(backendSheetNames.length ? backendSheetNames : workbook.sheets.map(s => s.name)).map((name, index) => {
+            const isActive = backendSheetNames.length ? (workbook.sheets[0]?.name === name) : (workbook.activeSheetId === workbook.sheets[index]?.id);
+            const sheetIdOrName = backendSheetNames.length ? name : (workbook.sheets[index]?.id || name);
+            return (
             <motion.div
-              key={sheet.id}
+              key={name}
               initial={{ opacity: 0, scale: 0.9, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -10 }}
@@ -92,14 +161,14 @@ export function SheetTabs({ className }: SheetTabsProps) {
               <motion.div
                 className={`
                   flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer transition-all duration-200 min-w-20
-                  ${workbook.activeSheetId === sheet.id 
+                  ${isActive 
                     ? 'bg-primary text-primary-foreground shadow-sm' 
                     : 'hover:bg-accent hover:text-accent-foreground'
                   }
                 `}
-                onClick={() => handleTabClick(sheet.id)}
-                onDoubleClick={() => handleTabDoubleClick(sheet.id, sheet.name)}
-                onContextMenu={(e) => handleContextMenu(e, sheet.id)}
+                onClick={() => handleTabClick(sheetIdOrName)}
+                onDoubleClick={() => handleTabDoubleClick(workbook.sheets[index]?.id || 'sheet-1', name)}
+                onContextMenu={(e) => handleContextMenu(e, workbook.sheets[index]?.id || 'sheet-1')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -119,15 +188,15 @@ export function SheetTabs({ className }: SheetTabsProps) {
                 ) : (
                   <>
                     <span className="text-sm font-medium truncate">
-                      {sheet.name}
+                      {name}
                     </span>
-                    {workbook.sheets.length > 1 && (
+                    {(!backendSheetNames.length && workbook.sheets.length > 1) && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRemoveSheet(sheet.id);
+                          handleRemoveSheet(workbook.sheets[index]!.id);
                         }}
                         className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
                       >
@@ -139,7 +208,7 @@ export function SheetTabs({ className }: SheetTabsProps) {
               </motion.div>
 
               {/* Active indicator */}
-              {workbook.activeSheetId === sheet.id && (
+              {isActive && (
                 <motion.div
                   layoutId="active-tab"
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-foreground"
@@ -147,7 +216,7 @@ export function SheetTabs({ className }: SheetTabsProps) {
                 />
               )}
             </motion.div>
-          ))}
+          );})}
         </AnimatePresence>
       </div>
 

@@ -9,6 +9,10 @@ import { FileViewer } from './FileViewer';
 import ExcelViewer from './ExcelViewer';
 import { cn } from '@/lib/utils';
 import { Message, Conversation } from '@/types/chat';
+import { useSpreadsheetStore } from '@/store/spreadsheetStore';
+import { getSheetContext, createAgentPlan, executeTool } from '@/lib/api/langgraph';
+import { importWorkbook as apiImportWorkbook, getWorkbook as apiGetWorkbook } from '@/lib/api/workbook';
+import { toast } from 'sonner';
 
 // Mock responses from Ledgr
 const mockResponses = [
@@ -58,43 +62,10 @@ export function ChatInterface() {
   const [conversations, setConversations] = useState<Conversation[]>([
     {
       id: '1',
-      title: 'Getting Started with Ledgr',
-      timestamp: '2 hours ago',
-      preview: 'Hello! I\'m Ledgr, your AI accounting assistant...',
-      messages: [
-        {
-          id: '1',
-          content: 'Hello! Can you help me understand what accounting features you offer?',
-          role: 'user',
-          timestamp: '2:30 PM',
-        },
-        {
-          id: '2',
-          content: "Hello! I'm Ledgr, your AI accounting assistant. I can help you with a wide variety of accounting tasks including:\n\n• Transaction organization and normalization\n• Journal entry generation\n• General ledger management\n• Audit checks and anomaly detection\n• Financial statement preparation\n• P&L, Cash Flow, and Payables/Receivables reports\n\nWhat accounting task would you like to work on today?",
-          role: 'assistant',
-          timestamp: '2:30 PM',
-        },
-      ],
-    },
-    {
-      id: '2',
-      title: 'Financial Statement Analysis',
-      timestamp: 'Yesterday',
-      preview: 'I can help you with financial statements! What specific...',
-      messages: [
-        {
-          id: '3',
-          content: 'Can you help me prepare financial statements?',
-          role: 'user',
-          timestamp: 'Yesterday 4:15 PM',
-        },
-        {
-          id: '4',
-          content: "I can definitely help you with financial statement preparation! I can assist with:\n\n• Profit & Loss statement generation\n• Cash Flow statement analysis\n• Balance sheet preparation\n• Payables and Receivables reports\n• Financial data validation and cleanup\n\nWhat specific financial statement or accounting report would you like help with?",
-          role: 'assistant',
-          timestamp: 'Yesterday 4:15 PM',
-        },
-      ],
+      title: 'New conversation',
+      timestamp: 'Now',
+      preview: 'Start a new conversation...',
+      messages: [],
     },
   ]);
   const [activeConversationId, setActiveConversationId] = useState<string>('1');
@@ -108,6 +79,7 @@ export function ChatInterface() {
     language?: string;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { workbook } = useSpreadsheetStore();
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
 
@@ -169,6 +141,77 @@ export function ChatInterface() {
               }
             : conv
         ));
+
+        // If spreadsheet, import to backend and set workbook in store
+        if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx') || file.name.endsWith('.csv')) {
+          try {
+            const { workbook_id } = await apiImportWorkbook(file);
+            const data = await apiGetWorkbook(workbook_id);
+
+            // Transform backend workbook to store shape (flatten first sheet to rows/cells grid)
+            const firstSheet = data.sheets[0];
+            const cellEntries = Object.entries(firstSheet.Cells || {});
+            // Determine bounds
+            const addresses = cellEntries.map(([addr]) => addr);
+            const coords = addresses.map(addr => {
+              const match = addr.match(/([A-Z]+)(\d+)/);
+              if (!match) return { col: 1, row: 1 };
+              const colLetters = match[1];
+              const row = parseInt(match[2], 10);
+              const col = colLetters.split('').reduce((acc, ch) => acc * 26 + (ch.charCodeAt(0) - 64), 0);
+              return { col, row };
+            });
+            const maxCol = Math.max(1, ...coords.map(c => c.col));
+            const maxRow = Math.max(1, ...coords.map(c => c.row));
+
+            const rows = Array.from({ length: Math.max(maxRow, 1) }, (_, r) => ({
+              id: `row-${r}`,
+              cells: Array.from({ length: Math.max(maxCol, 1) }, (_, c) => ({
+                id: `cell-${r}-${c}`,
+                value: ''
+              }))
+            }));
+
+            for (const [addr, cell] of cellEntries) {
+              const match = addr.match(/([A-Z]+)(\d+)/);
+              if (!match) continue;
+              const colLetters = match[1];
+              const rowIdx = parseInt(match[2], 10) - 1;
+              const colIdx = colLetters.split('').reduce((acc, ch) => acc * 26 + (ch.charCodeAt(0) - 64), 0) - 1;
+              if (rows[rowIdx] && rows[rowIdx].cells[colIdx]) {
+                rows[rowIdx].cells[colIdx].value = cell.Value ?? '';
+              }
+            }
+
+            const now = new Date().toISOString();
+            const workbookForStore = {
+              id: data.workbook_id,
+              name: data.workbook_id,
+              sheets: [{ id: 'sheet-1', name: firstSheet.Name, rows, createdAt: now, updatedAt: now }],
+              activeSheetId: 'sheet-1',
+              createdAt: now,
+              updatedAt: now
+            } as const;
+
+            useSpreadsheetStore.getState().setWorkbook(workbookForStore as any);
+            try {
+              toast.success('Workbook imported', { description: `ID: ${workbook_id} • Active sheet: ${firstSheet.Name}` });
+            } catch {}
+          } catch (e: any) {
+            const errMsg = e?.message || 'Failed to import workbook';
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              content: `Import error: ${errMsg}`,
+              role: 'assistant',
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            };
+            setConversations(prev => prev.map(conv => 
+              conv.id === activeConversationId 
+                ? { ...conv, messages: [...conv.messages, assistantMessage] }
+                : conv
+            ));
+          }
+        }
       }
     }
 
@@ -194,11 +237,76 @@ export function ChatInterface() {
     // Show typing indicator
     setIsTyping(true);
 
-    // Simulate API delay
-    setTimeout(() => {
+    try {
+      // Determine workbook and sheet (fetch latest state in case we just imported)
+      const wb = useSpreadsheetStore.getState().workbook || workbook;
+      const activeSheet = wb?.sheets.find(s => s.id === wb.activeSheetId);
+      if (!wb || !activeSheet) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: 'Please upload a spreadsheet first so I can fetch context.',
+          role: 'assistant',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setConversations(prev => prev.map(conv => 
+          conv.id === activeConversationId 
+            ? { ...conv, messages: [...conv.messages, assistantMessage] }
+            : conv
+        ));
+        setIsTyping(false);
+        return;
+      }
+
+      // Check for tool execution command: /tool <name> <jsonArgs>
+      const toolMatch = content.trim().match(/^\/tool\s+(\S+)\s+(\{[\s\S]*\})\s*$/i);
+      if (toolMatch) {
+        const toolName = toolMatch[1];
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(toolMatch[2]);
+        } catch (e) {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: 'Invalid JSON for tool arguments. Please provide valid JSON.',
+            role: 'assistant',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
+          setConversations(prev => prev.map(conv => 
+            conv.id === activeConversationId 
+              ? { ...conv, messages: [...conv.messages, assistantMessage] }
+              : conv
+          ));
+          return;
+        }
+
+        const result = await executeTool(wb.id, activeSheet.name, toolName, args);
+        const resultText = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: resultText,
+          role: 'assistant',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setConversations(prev => prev.map(conv => 
+          conv.id === activeConversationId 
+            ? { ...conv, messages: [...conv.messages, assistantMessage] }
+            : conv
+        ));
+        return;
+      }
+
+      // 1) Fetch sheet context (prompt-aware)
+      const context = await getSheetContext(wb.id, activeSheet.name, content);
+      const contextString = typeof context === 'string' ? context : JSON.stringify(context);
+
+      // 2) Create agent plan
+      const plan = await createAgentPlan(content, contextString);
+      const planText = typeof plan === 'string' ? plan : JSON.stringify(plan, null, 2);
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: generateResponse(content),
+        content: planText,
         role: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -209,9 +317,21 @@ export function ChatInterface() {
           ? { ...conv, messages: [...conv.messages, assistantMessage] }
           : conv
       ));
-
+    } catch (err: any) {
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Error: ${err?.message || 'Failed to reach service'}`,
+        role: 'assistant',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setConversations(prev => prev.map(conv => 
+        conv.id === activeConversationId 
+          ? { ...conv, messages: [...conv.messages, assistantMessage] }
+          : conv
+      ));
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
+    }
   };
 
   const handleNewConversation = () => {

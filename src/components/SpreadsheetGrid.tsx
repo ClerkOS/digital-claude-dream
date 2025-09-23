@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { Input } from '@/components/ui/input';
+import { setCell as apiSetCell } from '@/lib/api/cells';
 
 // Virtualization constants
 const CELL_WIDTH = 128; // w-32 = 128px
@@ -127,14 +128,41 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
   }, []);
 
   // Handle edit submission
-  const handleEditSubmit = useCallback((e: React.FormEvent) => {
+  const handleEditSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingCell) {
+      // Update local store immediately for responsiveness
       updateCell(editingCell, editValue);
+
+      // Also persist to backend if we have workbook/sheet
+      try {
+        if (workbook) {
+          const activeSheetObj = workbook.sheets.find(s => s.id === workbook.activeSheetId);
+          if (activeSheetObj) {
+            const parts = editingCell.split('-');
+            const rowIndex = Number(parts[1]);
+            const colIndex = Number(parts[2]);
+            const toColLetters = (n: number) => {
+              let s = '';
+              while (n > 0) {
+                const rem = (n - 1) % 26;
+                s = String.fromCharCode(65 + rem) + s;
+                n = Math.floor((n - 1) / 26);
+              }
+              return s;
+            };
+            const address = `${toColLetters(colIndex + 1)}${rowIndex + 1}`;
+            await apiSetCell(workbook.id, activeSheetObj.name, address, editValue);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to save cell:', err);
+      }
+
       setEditingCell(null);
       setEditValue('');
     }
-  }, [editingCell, editValue, updateCell]);
+  }, [editingCell, editValue, updateCell, workbook]);
 
   // Handle keyboard navigation
   useEffect(() => {
