@@ -224,7 +224,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
             value={message}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="Message Ledgr..."
+            placeholder="Message Zigma..."
             disabled={disabled}
             className={cn(
               "min-h-[20px] max-h-[120px] border-0 bg-transparent resize-none",
@@ -252,7 +252,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
 
         {/* Footer text */}
         <p className="text-xs text-muted-foreground text-center mt-2">
-          Ledgr can make mistakes. Please use with care.
+          Zigma can make mistakes. Please use with care.
         </p>
 
         {/* Quick Action Buttons */}

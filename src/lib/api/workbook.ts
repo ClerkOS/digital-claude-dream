@@ -28,4 +28,10 @@ export async function getWorkbook(workbookId: string): Promise<{ workbook_id: st
   return json.data;
 }
 
+export async function createWorkbook(): Promise<{ workbook_id: string }> {
+  const res = await fetch(`${API_ROOT}/workbook/create`, { method: 'POST' });
+  const json = await handle(res);
+  return json.data;
+}
+
 

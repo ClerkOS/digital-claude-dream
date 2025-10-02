@@ -46,43 +46,25 @@ export function FileUpload({ onFilesUploaded, maxFiles = 5, className }: FileUpl
     }
   }, [uploadedFiles]);
 
-  // Simulate backend parsing
-  const simulateParsing = async (file: File): Promise<ParsedData> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+  // Parse file content
+  const parseFile = async (file: File): Promise<ParsedData> => {
     if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
-      // Simulate Excel parsing with sample accounting data
+      // For Excel files, we'll let the backend handle the parsing
+      // This is a placeholder that returns empty data structure
       return {
-        headers: ['Date', 'Account', 'Description', 'Debit', 'Credit', 'Balance'],
-        rows: [
-          ['2024-01-01', 'Cash', 'Initial Investment', '10000', '0', '10000'],
-          ['2024-01-02', 'Equipment', 'Office Equipment Purchase', '0', '2500', '7500'],
-          ['2024-01-03', 'Accounts Receivable', 'Sale to Customer A', '0', '1500', '9000'],
-          ['2024-01-04', 'Revenue', 'Sale Revenue', '0', '1500', '10500'],
-          ['2024-01-05', 'Office Supplies', 'Stationery Purchase', '0', '200', '10300'],
-          ['2024-01-06', 'Utilities', 'Electricity Bill', '0', '300', '10000'],
-          ['2024-01-07', 'Accounts Payable', 'Supplier Invoice', '0', '800', '9200'],
-          ['2024-01-08', 'Cash', 'Customer Payment', '1200', '0', '10400'],
-          ['2024-01-09', 'Salaries', 'Employee Salary', '0', '2000', '8400'],
-          ['2024-01-10', 'Revenue', 'Service Revenue', '0', '2500', '10900']
-        ],
-        totalRows: 10,
-        totalColumns: 6
+        headers: [],
+        rows: [],
+        totalRows: 0,
+        totalColumns: 0
       };
     } else if (file.type.includes('pdf')) {
-      // Simulate PDF parsing
+      // For PDF files, we'll let the backend handle the parsing
+      // This is a placeholder that returns empty data structure
       return {
-        headers: ['Document Type', 'Date', 'Amount', 'Description', 'Account'],
-        rows: [
-          ['Invoice', '2024-01-15', '2500.00', 'Service Revenue - Customer A', 'Revenue'],
-          ['Receipt', '2024-01-16', '150.00', 'Office Supplies Purchase', 'Office Supplies'],
-          ['Statement', '2024-01-17', '800.00', 'Monthly Utilities Bill', 'Utilities'],
-          ['Invoice', '2024-01-18', '3200.00', 'Product Sales - Customer B', 'Revenue'],
-          ['Receipt', '2024-01-19', '450.00', 'Equipment Maintenance', 'Equipment']
-        ],
-        totalRows: 5,
-        totalColumns: 5
+        headers: [],
+        rows: [],
+        totalRows: 0,
+        totalColumns: 0
       };
     }
     
@@ -104,7 +86,7 @@ export function FileUpload({ onFilesUploaded, maxFiles = 5, className }: FileUpl
     // Parse each file
     for (const fileData of newFiles) {
       try {
-        const parsedData = await simulateParsing(fileData.file);
+        const parsedData = await parseFile(fileData.file);
         
         setUploadedFiles(prev => prev.map(f => 
           f.id === fileData.id 

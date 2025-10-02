@@ -1,17 +1,24 @@
 import { Plus, MessageSquare, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Conversation } from '@/types/chat';
 
 interface ChatSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   onNewConversation: () => void;
+  conversations?: Conversation[];
+  activeConversationId?: string;
+  onSelectConversation?: (id: string) => void;
 }
 
 export function ChatSidebar({
   isOpen,
   onToggle,
   onNewConversation,
+  conversations = [],
+  activeConversationId,
+  onSelectConversation,
 }: ChatSidebarProps) {
   return (
     <>
@@ -36,6 +43,7 @@ export function ChatSidebar({
           <span className="text-white font-bold text-sm">L</span>
         </div>
 
+        {/* Conversation List */}
         {/* Main Actions */}
         <div className="flex flex-col items-center gap-4 flex-1">
           {/* New Conversation Button */}
@@ -54,14 +62,14 @@ export function ChatSidebar({
         </div>
 
         {/* Bottom Actions */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4"> 
           {/* Settings Icon */}
           <div className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors cursor-pointer">
             <Settings className="h-5 w-5 text-muted-foreground" />
           </div>
 
           {/* Account Icon */}
-          <div className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors cursor-pointer">
+          <div className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors cursor-pointer"> 
             <User className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>

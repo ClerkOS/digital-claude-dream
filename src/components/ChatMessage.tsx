@@ -59,7 +59,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
         );
       }
 
-      // Add collapsed file block (like Ledgr)
+      // Add collapsed file block (like Zigma)
       const codePreview = code.trim().split('\n')[0].slice(0, 50) + (code.trim().split('\n')[0].length > 50 ? '...' : '');
       const lineCount = code.trim().split('\n').length;
       
@@ -137,9 +137,9 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
   return (
     <div className="flex justify-start mb-6 pl-8">
       <div className="flex gap-3 max-w-[85%]">
-        {/* Ledgr Avatar */}
+        {/* Zigma Avatar */}
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-          <span className="text-white font-bold text-xs">L</span>
+          <span className="text-white font-bold text-xs">Z</span>
         </div>
 
         <div className="flex-1">
@@ -167,7 +167,7 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
           </div>
           
           <div className="text-xs text-muted-foreground mt-1">
-            Ledgr • {timestamp}
+            Zigma • {timestamp}
           </div>
         </div>
       </div>
