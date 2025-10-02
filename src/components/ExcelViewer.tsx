@@ -11,15 +11,16 @@ import { SheetTabs } from './SheetTabs';
 interface ExcelViewerProps {
   isOpen: boolean;
   onClose: () => void;
-  file: {
+  file?: {
     name: string;
     content: string;
     type: 'text' | 'code' | 'image' | 'markdown';
     language?: string;
   } | null;
+  workbookId?: string;
 }
 
-function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
+function ExcelViewer({ isOpen, onClose, file, workbookId }: ExcelViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
@@ -27,8 +28,23 @@ function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
     workbook, 
     isLoading, 
     loadFromFile, 
-    exportToCSV 
+    exportToCSV,
+    refreshWorkbook
   } = useSpreadsheetStore();
+
+  // Load workbook data if workbookId is provided
+  useEffect(() => {
+    const loadWorkbook = async () => {
+      if (workbookId && !workbook) {
+        console.log('Loading workbook data in ExcelViewer:', workbookId);
+        await refreshWorkbook(workbookId);
+      }
+    };
+
+    if (isOpen) {
+      loadWorkbook();
+    }
+  }, [isOpen, workbookId, workbook, refreshWorkbook]);
 
   // Load file when it changes
   useEffect(() => {
@@ -50,13 +66,13 @@ function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = file?.name || 'spreadsheet.csv';
+      a.download = file?.name || workbook?.name || 'spreadsheet.csv';
       a.click();
       URL.revokeObjectURL(url);
     }
   };
 
-  if (!file) return null;
+  if (!file && !workbookId) return null;
 
   return (
     <motion.div
@@ -73,7 +89,7 @@ function ExcelViewer({ isOpen, onClose, file }: ExcelViewerProps) {
                 <FileSpreadsheet className="w-4 h-4 text-green-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">{file?.name || 'Spreadsheet'}</h2>
+                <h2 className="text-lg font-semibold">{file?.name || workbook?.name || 'Spreadsheet'}</h2>
                 <p className="text-xs text-muted-foreground">
                   {workbook ? `${workbook.sheets.length} sheet${workbook.sheets.length !== 1 ? 's' : ''}` : 'Loading...'}
                   {isLoading && ' • Loading...'}

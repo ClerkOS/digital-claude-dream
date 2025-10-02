@@ -29,10 +29,12 @@ export async function getSheetContext(
 }
 
 export async function createAgentPlan(
+  workbookId: string,
+  sheetName: string,
   userRequest: string,
   context: string
 ): Promise<any> {
-  const res = await fetch(`${BASE}/plan/`, {
+  const res = await fetch(`${BASE}/workbooks/${encodeURIComponent(workbookId)}/sheets/${encodeURIComponent(sheetName)}/plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_request: userRequest, context }),
@@ -43,17 +45,49 @@ export async function createAgentPlan(
 
 export async function executeTool(
   workbookId: string,
-  sheetName: string,
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, any>
 ): Promise<any> {
-  const res = await fetch(`${BASE}/workbooks/${encodeURIComponent(workbookId)}/sheets/${encodeURIComponent(sheetName)}/tools/${encodeURIComponent(toolName)}`, {
+  const res = await fetch(`${BASE}/workbooks/${encodeURIComponent(workbookId)}/tools/${encodeURIComponent(toolName)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(args || {}),
+    body: JSON.stringify(args),
   });
   const json = await handleJson<SuccessResponse<{ result: any }>>(res);
   return json.data.result;
+}
+
+export async function executePlan(
+  workbookId: string,
+  plan: any
+): Promise<Array<{ step: any; result: any; success: boolean }>> {
+  const results = [];
+  
+  if (!plan || !plan.steps) {
+    throw new Error('Invalid plan: no steps found');
+  }
+
+  console.log('Executing plan with steps:', plan.steps);
+
+  for (const step of plan.steps) {
+    try {
+      console.log(`Executing step ${step.step_id}: ${step.description}`);
+      const result = await executeTool(workbookId, step.tool, step.args);
+      results.push({ step, result, success: true });
+      console.log(`Step ${step.step_id} completed successfully:`, result);
+    } catch (error) {
+      console.error(`Step ${step.step_id} failed:`, error);
+      results.push({ 
+        step, 
+        result: null, 
+        success: false, 
+        error: error.message 
+      });
+      // Continue with other steps even if one fails
+    }
+  }
+
+  return results;
 }
 
 

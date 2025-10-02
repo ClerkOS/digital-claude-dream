@@ -8,9 +8,10 @@ interface ChatMessageProps {
   role: 'user' | 'assistant';
   timestamp: string;
   onViewFile?: (file: { name: string; content: string; type: 'text' | 'code' | 'image' | 'markdown'; language?: string; }) => void;
+  onViewSpreadsheet?: () => void;
 }
 
-export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessageProps) {
+export function ChatMessage({ content, role, timestamp, onViewFile, onViewSpreadsheet }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -39,6 +40,44 @@ export function ChatMessage({ content, role, timestamp, onViewFile }: ChatMessag
   };
 
   const renderContentWithCodeBlocks = (text: string) => {
+    // Check for "Click to view" spreadsheet text
+    const clickToViewMatch = text.match(/(.*?)\n📊 \*\*Click to view\*\* your updated spreadsheet!(.*)/);
+    
+    if (clickToViewMatch && onViewSpreadsheet) {
+      const [, beforeText, afterText] = clickToViewMatch;
+      return (
+        <>
+          <span className="whitespace-pre-wrap">{beforeText}</span>
+          <div className="my-3">
+            <div 
+              className="bg-muted/30 border border-border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={onViewSpreadsheet}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-500/10 rounded-md flex items-center justify-center">
+                    <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-foreground">
+                      Updated Spreadsheet
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      View your latest changes
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Click to view
+                </div>
+              </div>
+            </div>
+          </div>
+          {afterText && <span className="whitespace-pre-wrap">{afterText}</span>}
+        </>
+      );
+    }
+    
     if (codeBlocks.length === 0) {
       return <span className="whitespace-pre-wrap">{text}</span>;
     }

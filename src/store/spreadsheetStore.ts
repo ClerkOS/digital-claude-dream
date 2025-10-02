@@ -60,6 +60,7 @@ interface SpreadsheetState {
   selectCells: (cellIds: string[]) => void;
   updateCell: (cellId: string, value: any) => void;
   setGridViewport: (viewport: GridViewport) => void;
+  refreshWorkbook: (workbookId: string) => Promise<void>;
   
   // File operations
   loadFromFile: (file: { name: string; content: string; type: string }) => Promise<void>;
@@ -68,6 +69,81 @@ interface SpreadsheetState {
 
 // Helper function to create a cell ID
 const createCellId = (row: number, col: number): string => `cell-${row}-${col}`;
+
+// Helper function to convert backend sheet format to frontend format
+const convertSheetToRows = (sheet: any): Row[] => {
+  console.log('Converting sheet to rows:', sheet);
+  const cells = sheet.cells || {}; // Backend returns 'cells', not 'Cells'
+  const cellAddresses = Object.keys(cells);
+  
+  console.log('Cell addresses found:', cellAddresses);
+  console.log('Cells data:', cells);
+  
+  if (cellAddresses.length === 0) {
+    console.log('No cells found, creating empty structure');
+    // Empty sheet - create default empty structure
+    return Array.from({ length: 10 }, (_, rowIndex) => ({
+      id: `row-${rowIndex}`,
+      cells: Array.from({ length: 5 }, (_, colIndex) => ({
+        id: createCellId(rowIndex, colIndex),
+        value: '',
+        type: 'text' as const
+      }))
+    }));
+  }
+  
+  // Parse cell addresses to determine grid size
+  const rows = new Map<number, Map<number, any>>();
+  let maxRow = 0;
+  let maxCol = 0;
+  
+  cellAddresses.forEach(address => {
+    const match = address.match(/^([A-Z]+)(\d+)$/);
+    if (match) {
+      const colStr = match[1];
+      const rowNum = parseInt(match[2]) - 1; // Convert to 0-based
+      
+      // Convert column letters to number (A=0, B=1, etc.)
+      let colNum = 0;
+      for (let i = 0; i < colStr.length; i++) {
+        colNum = colNum * 26 + (colStr.charCodeAt(i) - 64);
+      }
+      colNum -= 1; // Convert to 0-based
+      
+      maxRow = Math.max(maxRow, rowNum);
+      maxCol = Math.max(maxCol, colNum);
+      
+      if (!rows.has(rowNum)) {
+        rows.set(rowNum, new Map());
+      }
+      rows.get(rowNum)!.set(colNum, cells[address]);
+    }
+  });
+  
+  // Create rows with proper structure
+  const result: Row[] = [];
+  const rowCount = Math.max(maxRow + 1, 10);
+  const colCount = Math.max(maxCol + 1, 5);
+  
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    const rowCells: Cell[] = [];
+    for (let colIndex = 0; colIndex < colCount; colIndex++) {
+      const cellData = rows.get(rowIndex)?.get(colIndex);
+      rowCells.push({
+        id: createCellId(rowIndex, colIndex),
+        value: cellData?.value || '',
+        formula: cellData?.formula,
+        type: 'text'
+      });
+    }
+    result.push({
+      id: `row-${rowIndex}`,
+      cells: rowCells
+    });
+  }
+  
+  return result;
+};
 
 // Helper function to parse CSV content
 const parseCSVContent = (content: string): { headers: string[]; rows: string[][] } => {
@@ -312,6 +388,40 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
       }),
       
       setGridViewport: (viewport) => set({ gridViewport: viewport }),
+      
+      refreshWorkbook: async (workbookId) => {
+        try {
+          // Import the workbook API function
+          const { getWorkbook } = await import('@/lib/api/workbook');
+          const workbookData = await getWorkbook(workbookId);
+          
+          console.log('Backend workbook data:', workbookData);
+          
+          // Convert the backend workbook format to our frontend format
+          const convertedWorkbook: Workbook = {
+            id: workbookData.workbook_id,
+            name: workbookData.workbook_name || 'Workbook', // Use backend name if available
+            sheets: workbookData.sheets.map((sheet: any, index: number) => {
+              console.log(`Converting sheet ${index}:`, sheet);
+              return {
+                id: `sheet-${index}`,
+                name: sheet.name, // Backend returns 'name', not 'Name'
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                rows: convertSheetToRows(sheet)
+              };
+            }),
+            activeSheetId: 'sheet-0', // Default to first sheet
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          console.log('Converted workbook:', convertedWorkbook);
+          set({ workbook: convertedWorkbook });
+        } catch (error) {
+          console.error('Failed to refresh workbook:', error);
+        }
+      },
       
       loadFromFile: async (file) => {
         set({ isLoading: true });

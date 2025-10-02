@@ -60,13 +60,17 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
+    console.log('handleSubmit called:', { message: message.trim(), uploadedFiles: uploadedFiles.length, disabled });
     if ((message.trim() || uploadedFiles.length > 0) && !disabled) {
+      console.log('Calling onSendMessage with:', message.trim());
       onSendMessage(message.trim(), uploadedFiles);
       setMessage('');
       setUploadedFiles([]);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
+    } else {
+      console.log('handleSubmit: conditions not met');
     }
   };
 
@@ -121,13 +125,16 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    console.log('Key pressed:', e.key, 'Shift:', e.shiftKey);
     if (e.key === 'Enter' && !e.shiftKey) {
+      console.log('Enter key detected, calling handleSubmit');
       e.preventDefault();
       handleSubmit();
     }
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    console.log('Textarea changed:', e.target.value);
     setMessage(e.target.value);
     
     // Auto-resize textarea

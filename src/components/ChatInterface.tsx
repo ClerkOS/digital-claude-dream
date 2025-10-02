@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Menu } from 'lucide-react';
+import { Menu, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { FileViewer } from './FileViewer';
 import ExcelViewer from './ExcelViewer';
+import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { cn } from '@/lib/utils';
 import { Message, Conversation } from '@/types/chat';
 
@@ -51,6 +52,41 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const { refreshWorkbook, workbook } = useSpreadsheetStore();
+
+  // Load workbook data when conversation has a workbookId
+  useEffect(() => {
+    const loadWorkbookData = async () => {
+      if (activeConversation && (activeConversation as any).workbookId && !workbook) {
+        console.log('Loading workbook data for:', (activeConversation as any).workbookId);
+        await refreshWorkbook((activeConversation as any).workbookId);
+      }
+    };
+
+    loadWorkbookData();
+  }, [activeConversation, workbook, refreshWorkbook]);
+
+  // Removed auto-opening ExcelViewer - user must click "Click to view" button
+
+  // Listen for spreadsheet refresh events
+  useEffect(() => {
+    const handleRefresh = (event: CustomEvent) => {
+      const { workbookId } = event.detail;
+      console.log('Received spreadsheet refresh event for workbook:', workbookId);
+      refreshWorkbook(workbookId).then(() => {
+        // Auto-open ExcelViewer after refresh
+        console.log('Auto-opening ExcelViewer after refresh');
+        setTimeout(() => {
+          setExcelViewerOpen(true);
+        }, 1000);
+      });
+    };
+
+    window.addEventListener('spreadsheet-refresh', handleRefresh as EventListener);
+    return () => {
+      window.removeEventListener('spreadsheet-refresh', handleRefresh as EventListener);
+    };
+  }, [refreshWorkbook]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,7 +119,18 @@ export function ChatInterface() {
   };
 
   const handleSendMessage = async (content: string, files?: any[]) => {
-    if (!activeConversationId) return;
+    // Create a conversation if none exists
+    if (!activeConversationId) {
+      const newConversation: Conversation = {
+        id: Date.now().toString(),
+        title: content.slice(0, 30) + (content.length > 30 ? '...' : ''),
+        timestamp: 'Now',
+        preview: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
+        messages: [],
+      };
+      setConversations(prev => [newConversation, ...prev]);
+      setActiveConversationId(newConversation.id);
+    }
 
     // Handle file uploads
     if (files && files.length > 0) {
@@ -121,6 +168,7 @@ export function ChatInterface() {
     };
 
     // Add user message
+    console.log('Adding user message:', userMessage);
     setConversations(prev => prev.map(conv => 
       conv.id === activeConversationId 
         ? { 
@@ -135,11 +183,96 @@ export function ChatInterface() {
     // Show typing indicator
     setIsTyping(true);
 
-    // Simulate API delay
-    setTimeout(() => {
+    try {
+      // For simple greetings and basic questions, use local responses
+      // For spreadsheet operations, use the AI planning system
+      const isSpreadsheetOperation = content.toLowerCase().includes('create') || 
+                                   content.toLowerCase().includes('add') ||
+                                   content.toLowerCase().includes('sheet') ||
+                                   content.toLowerCase().includes('table') ||
+                                   content.toLowerCase().includes('data') ||
+                                   content.toLowerCase().includes('ledger');
+
+      let responseContent = generateResponse(content);
+
+      if (isSpreadsheetOperation) {
+        // Create a workbook if conversation doesn't have one
+        let convo = (conversations.find(c => c.id === activeConversationId) as any) || {};
+        let workbookIdForConvo: string | undefined = convo.workbookId;
+        
+        if (!workbookIdForConvo) {
+          // Create a new workbook
+          const created = await (await import('@/lib/api/workbook')).createWorkbook();
+          workbookIdForConvo = created.workbook_id;
+          setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, workbookId: workbookIdForConvo } : c));
+        }
+
+        // Use the first sheet for now
+        const sheetName = "Sheet1";
+
+        // Get context from the sheet
+        const context = await (await import('@/lib/api/langgraph')).getSheetContext(
+          workbookIdForConvo, 
+          sheetName, 
+          content
+        );
+
+        // Create an agent plan
+        const plan = await (await import('@/lib/api/langgraph')).createAgentPlan(
+          workbookIdForConvo,
+          sheetName,
+          content,
+          context
+        );
+
+        console.log('Plan received from API:', plan);
+
+        // Execute the plan if it has steps
+        if (plan && plan.steps && plan.steps.length > 0) {
+          console.log('Executing plan with steps:', plan.steps);
+          const executionResults = await (await import('@/lib/api/langgraph')).executePlan(
+            workbookIdForConvo,
+            plan
+          );
+
+          console.log('Plan execution results:', executionResults);
+
+          // Build response based on execution results
+          const successfulSteps = executionResults.filter(r => r.success);
+          const failedSteps = executionResults.filter(r => !r.success);
+
+          if (successfulSteps.length > 0) {
+            responseContent = `✅ Successfully executed ${successfulSteps.length} step(s):\n`;
+            successfulSteps.forEach((result, index) => {
+              responseContent += `${index + 1}. ${result.step.description}\n`;
+            });
+
+            if (failedSteps.length > 0) {
+              responseContent += `\n⚠️ ${failedSteps.length} step(s) failed:\n`;
+              failedSteps.forEach((result, index) => {
+                responseContent += `${index + 1}. ${result.step.description}: ${result.error}\n`;
+              });
+            }
+
+            responseContent += `\n📊 **Click to view** your updated spreadsheet!`;
+
+            // Trigger spreadsheet refresh
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('spreadsheet-refresh', { 
+                detail: { workbookId: workbookIdForConvo } 
+              }));
+            }, 1000);
+          } else {
+            responseContent = `❌ Plan execution failed. ${generateResponse(content)}`;
+          }
+        } else if (plan && plan.goal) {
+          responseContent = `I understand you want to: ${plan.goal}. ${generateResponse(content)}`;
+        }
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: generateResponse(content),
+        content: responseContent,
         role: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -151,8 +284,25 @@ export function ChatInterface() {
           : conv
       ));
 
+    } catch (error) {
+      console.error('Error calling AI API:', error);
+      
+      // Fallback to local response
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Error: ${error.message}. ${generateResponse(content)}`,
+        role: 'assistant',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setConversations(prev => prev.map(conv => 
+        conv.id === activeConversationId 
+          ? { ...conv, messages: [...conv.messages, assistantMessage] }
+          : conv
+      ));
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
+    }
   };
 
   const handleNewConversation = () => {
@@ -189,6 +339,11 @@ export function ChatInterface() {
   const handleCloseExcelViewer = () => {
     setExcelViewerOpen(false);
     setSidebarOpen(true); // Reopen left sidebar when closing Excel viewer
+  };
+
+  const handleViewSpreadsheet = () => {
+    setExcelViewerOpen(true);
+    setSidebarOpen(false);
   };
 
   return (
@@ -258,6 +413,7 @@ export function ChatInterface() {
                     role={message.role}
                     timestamp={message.timestamp}
                     onViewFile={handleViewFile}
+                    onViewSpreadsheet={handleViewSpreadsheet}
                   />
                 ))}
                 
@@ -294,6 +450,7 @@ export function ChatInterface() {
           isOpen={excelViewerOpen}
           onClose={handleCloseExcelViewer}
           file={currentFile}
+          workbookId={activeConversation ? (activeConversation as any).workbookId : undefined}
         />
       )}
 
