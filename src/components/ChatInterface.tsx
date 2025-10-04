@@ -119,8 +119,12 @@ export function ChatInterface() {
   };
 
   const handleSendMessage = async (content: string, files?: any[]) => {
+    console.log('handleSendMessage called with:', { content, filesCount: files?.length || 0 });
+    
     // Create a conversation if none exists
-    if (!activeConversationId) {
+    let currentConversationId = activeConversationId;
+    if (!currentConversationId) {
+      console.log('No active conversation, creating new one');
       const newConversation: Conversation = {
         id: Date.now().toString(),
         title: content.slice(0, 30) + (content.length > 30 ? '...' : ''),
@@ -130,6 +134,10 @@ export function ChatInterface() {
       };
       setConversations(prev => [newConversation, ...prev]);
       setActiveConversationId(newConversation.id);
+      currentConversationId = newConversation.id; // Use the ID directly
+      console.log('Created new conversation with ID:', currentConversationId);
+    } else {
+      console.log('Using existing conversation ID:', currentConversationId);
     }
 
     // Handle file uploads
@@ -148,7 +156,7 @@ export function ChatInterface() {
 
         // Add file message
         setConversations(prev => prev.map(conv => 
-          conv.id === activeConversationId 
+          conv.id === currentConversationId 
             ? { 
                 ...conv, 
                 messages: [...conv.messages, fileMessage],
@@ -169,8 +177,9 @@ export function ChatInterface() {
 
     // Add user message
     console.log('Adding user message:', userMessage);
-    setConversations(prev => prev.map(conv => 
-      conv.id === activeConversationId 
+    setConversations(prev => {
+      const updated = prev.map(conv => 
+        conv.id === currentConversationId 
         ? { 
             ...conv, 
             messages: [...conv.messages, userMessage],
@@ -178,7 +187,10 @@ export function ChatInterface() {
             timestamp: 'Just now'
           }
         : conv
-    ));
+      );
+      console.log('Updated conversations:', updated.length, 'conversations');
+      return updated;
+    });
 
     // Show typing indicator
     setIsTyping(true);
@@ -197,14 +209,14 @@ export function ChatInterface() {
 
       if (isSpreadsheetOperation) {
         // Create a workbook if conversation doesn't have one
-        let convo = (conversations.find(c => c.id === activeConversationId) as any) || {};
+        let convo = (conversations.find(c => c.id === currentConversationId) as any) || {};
         let workbookIdForConvo: string | undefined = convo.workbookId;
         
         if (!workbookIdForConvo) {
           // Create a new workbook
           const created = await (await import('@/lib/api/workbook')).createWorkbook();
           workbookIdForConvo = created.workbook_id;
-          setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, workbookId: workbookIdForConvo } : c));
+          setConversations(prev => prev.map(c => c.id === currentConversationId ? { ...c, workbookId: workbookIdForConvo } : c));
         }
 
         // Use the first sheet for now
@@ -257,7 +269,7 @@ export function ChatInterface() {
             responseContent += `\n📊 **Click to view** your updated spreadsheet!`;
 
             // Trigger spreadsheet refresh
-            setTimeout(() => {
+    setTimeout(() => {
               window.dispatchEvent(new CustomEvent('spreadsheet-refresh', { 
                 detail: { workbookId: workbookIdForConvo } 
               }));
@@ -279,7 +291,7 @@ export function ChatInterface() {
 
       // Add assistant response
       setConversations(prev => prev.map(conv => 
-        conv.id === activeConversationId 
+        conv.id === currentConversationId 
           ? { ...conv, messages: [...conv.messages, assistantMessage] }
           : conv
       ));
@@ -296,7 +308,7 @@ export function ChatInterface() {
       };
 
       setConversations(prev => prev.map(conv => 
-        conv.id === activeConversationId 
+        conv.id === currentConversationId 
           ? { ...conv, messages: [...conv.messages, assistantMessage] }
           : conv
       ));
