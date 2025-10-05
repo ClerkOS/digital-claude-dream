@@ -33,5 +33,3 @@ export async function createWorkbook(): Promise<{ workbook_id: string }> {
   const json = await handle(res);
   return json.data;
 }
-
-

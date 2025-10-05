@@ -36,7 +36,6 @@ function ExcelViewer({ isOpen, onClose, file, workbookId }: ExcelViewerProps) {
   useEffect(() => {
     const loadWorkbook = async () => {
       if (workbookId && !workbook) {
-        console.log('Loading workbook data in ExcelViewer:', workbookId);
         await refreshWorkbook(workbookId);
       }
     };

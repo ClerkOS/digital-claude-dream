@@ -72,15 +72,11 @@ const createCellId = (row: number, col: number): string => `cell-${row}-${col}`;
 
 // Helper function to convert backend sheet format to frontend format
 const convertSheetToRows = (sheet: any): Row[] => {
-  console.log('Converting sheet to rows:', sheet);
   const cells = sheet.cells || {}; // Backend returns 'cells', not 'Cells'
   const cellAddresses = Object.keys(cells);
   
-  console.log('Cell addresses found:', cellAddresses);
-  console.log('Cells data:', cells);
   
   if (cellAddresses.length === 0) {
-    console.log('No cells found, creating empty structure');
     // Empty sheet - create default empty structure
     return Array.from({ length: 10 }, (_, rowIndex) => ({
       id: `row-${rowIndex}`,
@@ -395,14 +391,12 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
           const { getWorkbook } = await import('@/lib/api/workbook');
           const workbookData = await getWorkbook(workbookId);
           
-          console.log('Backend workbook data:', workbookData);
           
           // Convert the backend workbook format to our frontend format
           const convertedWorkbook: Workbook = {
             id: workbookData.workbook_id,
             name: workbookData.workbook_name || 'Workbook', // Use backend name if available
             sheets: workbookData.sheets.map((sheet: any, index: number) => {
-              console.log(`Converting sheet ${index}:`, sheet);
               return {
                 id: `sheet-${index}`,
                 name: sheet.name, // Backend returns 'name', not 'Name'
@@ -416,7 +410,6 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
             updatedAt: new Date().toISOString()
           };
           
-          console.log('Converted workbook:', convertedWorkbook);
           set({ workbook: convertedWorkbook });
         } catch (error) {
           console.error('Failed to refresh workbook:', error);

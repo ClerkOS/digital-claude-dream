@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, FileSpreadsheet } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatMessage } from './ChatMessage';
@@ -58,7 +58,6 @@ export function ChatInterface() {
   useEffect(() => {
     const loadWorkbookData = async () => {
       if (activeConversation && (activeConversation as any).workbookId && !workbook) {
-        console.log('Loading workbook data for:', (activeConversation as any).workbookId);
         await refreshWorkbook((activeConversation as any).workbookId);
       }
     };
@@ -72,10 +71,8 @@ export function ChatInterface() {
   useEffect(() => {
     const handleRefresh = (event: CustomEvent) => {
       const { workbookId } = event.detail;
-      console.log('Received spreadsheet refresh event for workbook:', workbookId);
       refreshWorkbook(workbookId).then(() => {
         // Auto-open ExcelViewer after refresh
-        console.log('Auto-opening ExcelViewer after refresh');
         setTimeout(() => {
           setExcelViewerOpen(true);
         }, 1000);
@@ -119,12 +116,10 @@ export function ChatInterface() {
   };
 
   const handleSendMessage = async (content: string, files?: any[]) => {
-    console.log('handleSendMessage called with:', { content, filesCount: files?.length || 0 });
     
     // Create a conversation if none exists
     let currentConversationId = activeConversationId;
     if (!currentConversationId) {
-      console.log('No active conversation, creating new one');
       const newConversation: Conversation = {
         id: Date.now().toString(),
         title: content.slice(0, 30) + (content.length > 30 ? '...' : ''),
@@ -135,36 +130,68 @@ export function ChatInterface() {
       setConversations(prev => [newConversation, ...prev]);
       setActiveConversationId(newConversation.id);
       currentConversationId = newConversation.id; // Use the ID directly
-      console.log('Created new conversation with ID:', currentConversationId);
     } else {
-      console.log('Using existing conversation ID:', currentConversationId);
     }
 
-    // Handle file uploads
+    // Handle file uploads - IMPORT TO BACKEND
     if (files && files.length > 0) {
+      // Ensure we have a workbook ID for file imports
+      if (!workbookIdForConvo) {
+        const created = await (await import('@/lib/api/workbook')).createWorkbook();
+        workbookIdForConvo = created.workbook_id;
+        setConversations(prev => prev.map(c => c.id === currentConversationId ? { ...c, workbookId: workbookIdForConvo } : c));
+      }
+
       for (const fileData of files) {
         const file = fileData.file;
         const fileContent = await readFileContent(file);
         
-        // Create a file message
-        const fileMessage: Message = {
-          id: Date.now().toString() + '_file',
-          content: `📎 **${file.name}** (${file.type.includes('pdf') ? 'PDF' : 'Excel'})\n\n${fileContent}`,
-          role: 'user',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
+        try {
+          // Import the file to the backend
+          const importResult = await (await import('@/lib/api/workbook')).importWorkbook(file, workbookIdForConvo);
+          
+          // Create a file message with import success
+          const fileMessage: Message = {
+            id: Date.now().toString() + '_file',
+            content: `📎 **${file.name}** imported successfully!\n\nSheets: ${importResult.sheets.join(', ')}`,
+            role: 'user',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
 
-        // Add file message
-        setConversations(prev => prev.map(conv => 
-          conv.id === currentConversationId 
-            ? { 
-                ...conv, 
-                messages: [...conv.messages, fileMessage],
-                preview: `📎 ${file.name}`,
-                timestamp: 'Just now'
-              }
-            : conv
-        ));
+          // Add file message
+          setConversations(prev => prev.map(conv => 
+            conv.id === currentConversationId 
+              ? { 
+                  ...conv, 
+                  messages: [...conv.messages, fileMessage],
+                  preview: `📎 ${file.name}`,
+                  timestamp: 'Just now'
+                }
+              : conv
+          ));
+        } catch (error) {
+          console.error('Failed to import file:', error);
+          
+          // Create a file message with error
+          const fileMessage: Message = {
+            id: Date.now().toString() + '_file',
+            content: `❌ **${file.name}** import failed: ${error.message}`,
+            role: 'user',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
+
+          // Add error message
+          setConversations(prev => prev.map(conv => 
+            conv.id === currentConversationId 
+              ? { 
+                  ...conv, 
+                  messages: [...conv.messages, fileMessage],
+                  preview: `❌ ${file.name}`,
+                  timestamp: 'Just now'
+                }
+              : conv
+          ));
+        }
       }
     }
 
@@ -176,7 +203,6 @@ export function ChatInterface() {
     };
 
     // Add user message
-    console.log('Adding user message:', userMessage);
     setConversations(prev => {
       const updated = prev.map(conv => 
         conv.id === currentConversationId 
@@ -188,7 +214,6 @@ export function ChatInterface() {
           }
         : conv
       );
-      console.log('Updated conversations:', updated.length, 'conversations');
       return updated;
     });
 
@@ -203,82 +228,49 @@ export function ChatInterface() {
                                    content.toLowerCase().includes('sheet') ||
                                    content.toLowerCase().includes('table') ||
                                    content.toLowerCase().includes('data') ||
-                                   content.toLowerCase().includes('ledger');
+                                   content.toLowerCase().includes('ledger') ||
+                                   content.toLowerCase().includes('analyze');
 
       let responseContent = generateResponse(content);
 
       if (isSpreadsheetOperation) {
-        // Create a workbook if conversation doesn't have one
-        let convo = (conversations.find(c => c.id === currentConversationId) as any) || {};
-        let workbookIdForConvo: string | undefined = convo.workbookId;
-        
+        // Use the workbookId that was created for file imports, or create a new one if needed
         if (!workbookIdForConvo) {
-          // Create a new workbook
           const created = await (await import('@/lib/api/workbook')).createWorkbook();
           workbookIdForConvo = created.workbook_id;
           setConversations(prev => prev.map(c => c.id === currentConversationId ? { ...c, workbookId: workbookIdForConvo } : c));
         }
 
-        // Use the first sheet for now
         const sheetName = "Sheet1";
 
-        // Get context from the sheet
-        const context = await (await import('@/lib/api/langgraph')).getSheetContext(
-          workbookIdForConvo, 
-          sheetName, 
+        const result = await (await import('@/lib/api/langgraph')).createAgentPlan(
+          workbookIdForConvo,
+          sheetName,
           content
         );
 
-        // Create an agent plan
-        const plan = await (await import('@/lib/api/langgraph')).createAgentPlan(
-          workbookIdForConvo,
-          sheetName,
-          content,
-          context
-        );
-
-        console.log('Plan received from API:', plan);
-
-        // Execute the plan if it has steps
-        if (plan && plan.steps && plan.steps.length > 0) {
-          console.log('Executing plan with steps:', plan.steps);
-          const executionResults = await (await import('@/lib/api/langgraph')).executePlan(
-            workbookIdForConvo,
-            plan
-          );
-
-          console.log('Plan execution results:', executionResults);
-
-          // Build response based on execution results
-          const successfulSteps = executionResults.filter(r => r.success);
-          const failedSteps = executionResults.filter(r => !r.success);
-
-          if (successfulSteps.length > 0) {
-            responseContent = `✅ Successfully executed ${successfulSteps.length} step(s):\n`;
-            successfulSteps.forEach((result, index) => {
-              responseContent += `${index + 1}. ${result.step.description}\n`;
+        if (result && result.plan && result.execution_result) {
+          const plan = result.plan;
+          
+          responseContent = `✅ Successfully executed: ${plan.goal}\n\n`;
+          
+          if (plan.steps && plan.steps.length > 0) {
+            plan.steps.forEach((step, index) => {
+              responseContent += `${index + 1}. ${step.description}\n`;
             });
-
-            if (failedSteps.length > 0) {
-              responseContent += `\n⚠️ ${failedSteps.length} step(s) failed:\n`;
-              failedSteps.forEach((result, index) => {
-                responseContent += `${index + 1}. ${result.step.description}: ${result.error}\n`;
-              });
-            }
-
-            responseContent += `\n📊 **Click to view** your updated spreadsheet!`;
-
-            // Trigger spreadsheet refresh
-    setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('spreadsheet-refresh', { 
-                detail: { workbookId: workbookIdForConvo } 
-              }));
-            }, 1000);
-          } else {
-            responseContent = `❌ Plan execution failed. ${generateResponse(content)}`;
           }
-        } else if (plan && plan.goal) {
-          responseContent = `I understand you want to: ${plan.goal}. ${generateResponse(content)}`;
+
+          responseContent += `\n📊 **Click to view** your updated spreadsheet!`;
+
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('spreadsheet-refresh', { 
+              detail: { workbookId: workbookIdForConvo } 
+            }));
+          }, 1000);
+        } else if (result && result.plan && result.plan.goal) {
+          responseContent = `I understand you want to: ${result.plan.goal}. ${generateResponse(content)}`;
+        } else {
+          responseContent = `❌ Agent execution failed. ${generateResponse(content)}`;
         }
       }
 
