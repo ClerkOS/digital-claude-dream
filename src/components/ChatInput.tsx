@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
-import { Send, Paperclip, X, CheckCircle, Loader2, AlertCircle, BookOpen, FileText, TrendingUp, CreditCard, Receipt } from 'lucide-react';
+import { Send, Paperclip, X, CheckCircle, Loader2, AlertCircle, BookOpen, FileText, TrendingUp, CreditCard, Receipt, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface UploadedFile {
   id: string;
@@ -56,6 +57,7 @@ const accountingQuickActions = [
 export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [showQuickActions, setShowQuickActions] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -198,7 +200,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
           </div>
         )}
 
-        <div className="relative flex items-end gap-3 bg-card border border-border rounded-xl p-3">
+        <div className="relative flex items-end gap-3 bg-background/95 backdrop-blur-sm border border-border/50 rounded-2xl p-4 shadow-sm">
           {/* Hidden file input */}
           <input
             ref={fileInputRef}
@@ -214,7 +216,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
             variant="ghost"
             size="icon"
             onClick={handleFileSelect}
-            className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -225,12 +227,12 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
             value={message}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="Message Zigma..."
+            placeholder="Ask Zigma anything about your financial data..."
             disabled={disabled}
             className={cn(
-              "min-h-[20px] max-h-[120px] border-0 bg-transparent resize-none",
+              "min-h-[24px] max-h-[120px] border-0 bg-transparent resize-none",
               "focus-visible:ring-0 focus-visible:ring-offset-0 p-0",
-              "placeholder:text-muted-foreground"
+              "placeholder:text-muted-foreground text-sm leading-relaxed"
             )}
             rows={1}
           />
@@ -241,44 +243,78 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
             disabled={(!message.trim() && uploadedFiles.length === 0) || disabled}
             size="icon"
             className={cn(
-              "h-8 w-8 flex-shrink-0",
+              "h-9 w-9 flex-shrink-0 rounded-lg transition-all duration-200",
               (message.trim() || uploadedFiles.length > 0) && !disabled
-                ? "bg-primary hover:bg-primary/90 text-white"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
+                ? "bg-primary hover:bg-primary/90 text-white shadow-sm"
+                : "bg-muted/50 text-muted-foreground cursor-not-allowed"
             )}
           >
             <Send className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Footer text */}
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Zigma can make mistakes. Please use with care.
-        </p>
+        {/* Quick Actions Toggle */}
+        <div className="flex justify-center mt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowQuickActions(!showQuickActions)}
+            className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+          >
+            {showQuickActions ? (
+              <>
+                <ChevronUp className="h-3 w-3 mr-1" />
+                Hide quick actions
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3 mr-1" />
+                Show quick actions
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex flex-wrap gap-2 mt-4 justify-center">
-          {accountingQuickActions.map((action) => {
-            const IconComponent = action.icon;
-            return (
-              <Button
-                key={action.id}
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction(action)}
-                disabled={disabled}
-                className={cn(
-                  "h-8 px-3 text-xs font-normal",
-                  "hover:bg-primary/10 hover:border-primary/20 hover:text-primary",
-                  "transition-colors duration-200"
-                )}
-              >
-                <IconComponent className="h-3 w-3 mr-1.5" />
-                {action.label}
-              </Button>
-            );
-          })}
-        </div>
+        <AnimatePresence>
+          {showQuickActions && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-wrap gap-2 mt-3 justify-center">
+                {accountingQuickActions.map((action) => {
+                  const IconComponent = action.icon;
+                  return (
+                    <Button
+                      key={action.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleQuickAction(action)}
+                      disabled={disabled}
+                      className={cn(
+                        "h-8 px-3 text-xs font-medium rounded-lg",
+                        "hover:bg-primary/5 hover:border-primary/30 hover:text-primary",
+                        "transition-all duration-200 border-border/50"
+                      )}
+                    >
+                      <IconComponent className="h-3.5 w-3.5 mr-1.5" />
+                      {action.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Footer text */}
+        <p className="text-xs text-muted-foreground text-center mt-3">
+          Zigma can make mistakes. Please verify important information.
+        </p>
       </div>
     </div>
   );

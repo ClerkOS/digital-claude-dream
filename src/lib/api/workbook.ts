@@ -1,4 +1,4 @@
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8080/api/v1/langgraph';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8081/api/v1/langgraph';
 const API_ROOT = (import.meta as any).env?.VITE_API_ROOT || API_BASE.replace(/\/langgraph$/, '');
 
 async function handle(res: Response) {

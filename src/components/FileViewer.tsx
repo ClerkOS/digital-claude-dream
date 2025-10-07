@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { X, Copy, Download, FileText, Code, Image as ImageIcon } from 'lucide-react';
+import { X, Copy, Download, FileText, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 interface FileViewerProps {
   isOpen: boolean;
@@ -47,104 +46,52 @@ export function FileViewer({ isOpen, onClose, file }: FileViewerProps) {
     switch (file.type) {
       case 'code':
         return <Code className="h-4 w-4" />;
-      case 'image':
-        return <ImageIcon className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
   };
 
-  const renderContent = () => {
-    if (!file) return null;
-
-    switch (file.type) {
-      case 'code':
-        return (
-          <pre className="text-sm font-mono text-foreground whitespace-pre-wrap break-words p-4 bg-muted/30 rounded-lg overflow-auto">
-            <code className={`language-${file.language || 'text'}`}>
-              {file.content}
-            </code>
-          </pre>
-        );
-      case 'image':
-        return (
-          <div className="flex items-center justify-center p-4">
-            <img
-              src={file.content}
-              alt={file.name}
-              className="max-w-full max-h-96 object-contain rounded-lg"
-            />
-          </div>
-        );
-      default:
-        return (
-          <div className="text-sm text-foreground whitespace-pre-wrap break-words p-4">
-            {file.content}
-          </div>
-        );
-    }
-  };
-
-  if (!isOpen) return null;
+  if (!isOpen || !file) return null;
 
   return (
-    <>
-      {/* Overlay for mobile */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-        onClick={onClose}
-      />
-      
-      {/* File Viewer Panel */}
-      <div
-        className={cn(
-          "fixed right-0 top-0 h-full bg-background border-l border-border z-50",
-          "w-full max-w-2xl lg:w-1/2 xl:w-2/5",
-          "flex flex-col shadow-xl"
-        )}
-      >
+    <div className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center p-4">
+      <div className="bg-background border border-border/50 rounded-lg w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur">
-          <div className="flex items-center gap-2 min-w-0">
-            {getFileIcon()}
-            <span className="font-medium text-foreground truncate">
-              {file?.name || 'Untitled'}
-            </span>
-            {file?.language && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                {file.language}
-              </span>
-            )}
+        <div className="flex items-center justify-between p-3 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-muted rounded flex items-center justify-center">
+              {getFileIcon()}
+            </div>
+            <div>
+              <h2 className="text-sm font-medium">{file.name}</h2>
+              <p className="text-xs text-muted-foreground">
+                {file.language || file.type}
+              </p>
+            </div>
           </div>
           
           <div className="flex items-center gap-1">
-            {file?.type !== 'image' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Copy className="h-4 w-4" />
-                {copied ? 'Copied!' : 'Copy'}
-              </Button>
-            )}
-            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className="h-7 px-2"
+            >
+              {copied ? <Copy className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDownload}
-              className="text-muted-foreground hover:text-foreground"
+              className="h-7 px-2"
             >
-              <Download className="h-4 w-4" />
-              Download
+              <Download className="h-3 w-3" />
             </Button>
-            
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 p-0"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -152,19 +99,20 @@ export function FileViewer({ isOpen, onClose, file }: FileViewerProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto">
-          {file ? (
-            renderContent()
+        <div className="flex-1 overflow-auto p-3">
+          {file.type === 'code' ? (
+            <pre className="text-xs font-mono leading-relaxed whitespace-pre-wrap">
+              <code className={`language-${file.language || 'text'}`}>
+                {file.content}
+              </code>
+            </pre>
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No file selected</p>
-              </div>
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+              {file.content}
             </div>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

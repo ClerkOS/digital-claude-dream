@@ -1,11 +1,11 @@
-# Ledgr - AI for Accounting
+# Zigma - AI for Accounting
 
-Ledgr is an AI-powered accounting automation platform that helps organizations streamline their financial processes through intelligent data processing and analysis.
+Zigma is an AI-powered accounting automation platform that helps organizations streamline their financial processes through intelligent data processing and analysis.
 
 ## Features
 
 ### Automatic Data Processing
-When you upload your financial data, Ledgr automatically:
+When you upload your financial data, Zigma automatically:
 
 - **Organization**: Cleans and normalizes transactions for accurate processing
 - **Ledger**: Generates journal entries and maintains a comprehensive general ledger
@@ -62,7 +62,7 @@ npm run build
 
 ## AI Accounting Capabilities
 
-Ledgr leverages advanced AI to provide:
+Zigma leverages advanced AI to provide:
 
 - **Transaction Normalization**: Automatically categorizes and standardizes financial data
 - **Journal Entry Generation**: Creates accurate journal entries based on transaction patterns

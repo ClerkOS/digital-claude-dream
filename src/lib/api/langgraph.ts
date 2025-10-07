@@ -4,7 +4,7 @@ export interface SuccessResponse<T> {
   success: boolean;
 }
 
-const BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8080/api/v1/langgraph';
+const BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8081/api/v1/langgraph';
 
 async function handleJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -14,16 +14,16 @@ async function handleJson<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-export async function createAgentPlan(
+export async function executeAgent(
   workbookId: string,
-  sheetName: string,
   userRequest: string,
-  context: string = ""
+  sheetName: string = "Sheet1"
 ): Promise<any> {
-  const res = await fetch(`${BASE}/workbooks/${encodeURIComponent(workbookId)}/sheets/${encodeURIComponent(sheetName)}/plan`, {
+  const API_ROOT = BASE.replace(/\/langgraph$/, '');
+  const res = await fetch(`${API_ROOT}/agents/execute/${encodeURIComponent(workbookId)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_request: userRequest, context }),
+    body: JSON.stringify({ user_request: userRequest, sheet_name: sheetName }),
   });
   const json = await handleJson<SuccessResponse<any>>(res);
   return json.data;
