@@ -43,6 +43,26 @@ Build the project for production:
 npm run build
 ```
 
+### Deployment
+
+#### Vercel
+
+This project is configured for easy deployment on Vercel.
+
+1. Push your code to GitHub/GitLab/Bitbucket
+2. Import your repository on [Vercel](https://vercel.com)
+3. Add environment variables in Vercel project settings:
+   - `VITE_API_BASE` - Your backend API base URL (default: `http://localhost:8081/api/v1/langgraph`)
+   - `VITE_API_ROOT` - Your backend API root URL (default: `http://localhost:8081/api/v1`)
+4. Deploy!
+
+The `vercel.json` configuration handles:
+- SPA routing with rewrites
+- Asset caching for optimal performance
+- Automatic build detection
+
+For local development, copy `ENV.example` to `.env` and configure your API endpoints.
+
 ## Technologies Used
 
 - **Vite** - Build tool and development server
