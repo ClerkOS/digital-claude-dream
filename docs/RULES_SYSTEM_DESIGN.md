@@ -128,6 +128,17 @@ Zigma: ✅ Rule created: Momo transfers → Digital Payments
 - **Rule Count**: Shows total active rules
 - **Create Button**: Always accessible
 
+#### Proactive Rule Creation:
+Users can create rules before issues appear:
+
+1. User clicks "Create New Rule" button in Rules Panel
+2. Panel expands with blank textarea: "Type your rule..."
+3. User enters natural language rule: "Always require student ID for payment entries"
+4. Rule is auto-committed and immediately active
+5. Confirmation appears: "✅ Rule created. This will apply to all future records."
+
+This enables users to set up rules proactively based on their domain knowledge, not just react to detected issues.
+
 ---
 
 ## Technical Implementation
@@ -186,6 +197,16 @@ interface ProjectRule {
 2. Panel slides out showing all active rules
 3. User can edit, delete, or create new rules
 4. Changes apply immediately with confirmation
+
+### Scenario 4: Proactive Rule Creation (Before Issues Occur)
+1. User opens the Rules Panel from sidebar
+2. Clicks "Create New Rule" button at bottom
+3. Rule creation panel slides in (same as issue-based creation)
+4. User types: "Always require customer email for all transactions"
+5. Zigma confirms: "✅ Rule created. This will apply to all future records."
+6. Rule appears in the rules list at top (most recent first)
+
+**Key Principle**: No issue needed. Users can set up rules proactively based on their domain knowledge and business requirements.
 
 ---
 
