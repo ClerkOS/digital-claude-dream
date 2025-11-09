@@ -46,8 +46,6 @@ const Index = () => {
   const activeProject = projects.find(p => p.id === activeProjectId);
 
   const handleFileUpload = async (files: any[]) => {
-    console.log('Files uploaded:', files);
-
     // Start upload simulation
     setUploadState({
       files,
@@ -150,7 +148,7 @@ const Index = () => {
   };
 
   const handleConnectSource = () => {
-    console.log('Connect source clicked');
+    // Connect source functionality
   };
 
   const handleNewProject = () => {

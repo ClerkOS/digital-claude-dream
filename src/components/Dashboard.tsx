@@ -124,6 +124,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     isOpen: false
   });
   const [newRuleText, setNewRuleText] = useState('');
+  const [isCreatingStandaloneRule, setIsCreatingStandaloneRule] = useState(false);
 
   // Issue Expansion State
   const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
@@ -361,29 +362,40 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
 
   const handleResolveIssue = (issueId: string) => {
     const issueToResolve = dataIssues.find(issue => issue.id === issueId);
+    if (!issueToResolve) return;
     
-    setDataIssues(prev => {
-      const updatedIssues = prev.filter(issue => issue.id !== issueId);
-      
-      // Calculate new total issues count
-      const newTotalIssues = updatedIssues.reduce((sum, issue) => sum + issue.count, 0);
-      
-      // Update data health with new counts
-      setDataHealth(prevHealth => ({
-        ...prevHealth,
-        resolvedIssues: prevHealth.resolvedIssues + (issueToResolve?.count || 0),
-        issuesFound: newTotalIssues,
-        cleanlinessPercentage: Math.min(100, prevHealth.cleanlinessPercentage + 2)
-      }));
-      
-      return updatedIssues;
-    });
+    // First, mark as resolving (fade to gray)
+    setDataIssues(prev => prev.map(issue => 
+      issue.id === issueId ? { ...issue, isResolving: true } : issue
+    ));
+
+    // After fade animation, move to resolved
+    setTimeout(() => {
+      setDataIssues(prev => {
+        const updatedIssues = prev.filter(issue => issue.id !== issueId);
+        
+        // Calculate new total issues count
+        const newTotalIssues = updatedIssues.reduce((sum, issue) => sum + issue.count, 0);
+        
+        // Update data health with new counts
+        setDataHealth(prevHealth => ({
+          ...prevHealth,
+          resolvedIssues: prevHealth.resolvedIssues + issueToResolve.count,
+          issuesFound: newTotalIssues,
+          cleanlinessPercentage: Math.min(100, prevHealth.cleanlinessPercentage + 2)
+        }));
+        
+        // Add to resolved issues list
+        setResolvedIssues(prev => [...prev, { ...issueToResolve, isResolved: true }]);
+        
+        return updatedIssues;
+      });
+    }, 600); // Wait for fade animation
   };
 
   const handleViewAffectedRows = (issue: DataIssue) => {
     // In a real implementation, this would open a side panel or modal
     // showing the specific rows that have this issue
-    console.log('Viewing affected rows for issue:', issue.title, issue.affectedRows);
   };
 
   // Rules System Helper Functions
@@ -446,6 +458,32 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     setTimeout(() => {
       handleResolveIssueByRule(issueId);
     }, 500);
+  };
+
+  const createStandaloneRule = () => {
+    if (!newRuleText.trim()) return;
+
+    const newRule: ProjectRule = {
+      id: `rule-${Date.now()}`,
+      createdAt: new Date(),
+      naturalLanguage: newRuleText,
+      category: 'data_validation',
+      scope: 'future_only',
+      isActive: true,
+      appliedToRecords: 0
+      // No relatedIssueType for standalone rules
+    };
+
+    setProjectRules(prev => [newRule, ...prev]);
+    setNewRuleText('');
+    setIsCreatingStandaloneRule(false);
+
+    // Show system banner
+    setSystemBannerMessage(`✨ Rule created: ${newRuleText}`);
+    setSystemBannerVisible(true);
+    setTimeout(() => {
+      setSystemBannerVisible(false);
+    }, 3000);
   };
 
   const handleResolveIssueByRule = (issueId: string) => {
@@ -1130,7 +1168,11 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowRulesPanel(false)}
+                  onClick={() => {
+                    setShowRulesPanel(false);
+                    setIsCreatingStandaloneRule(false);
+                    setNewRuleText('');
+                  }}
                   className="h-8 w-8 p-0"
                 >
                   ×
@@ -1140,52 +1182,101 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
               {/* Rules List */}
               <div className="flex-1 p-6 overflow-y-auto">
                 <div className="space-y-4">
-                  {projectRules.length === 0 ? (
+                  {/* Standalone Rule Creation Form */}
+                  {isCreatingStandaloneRule && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="bg-muted/20 rounded-lg p-4 border border-border"
+                    >
+                      <p className="text-sm font-medium text-foreground mb-3">
+                        Create New Rule
+                      </p>
+                      <Textarea
+                        value={newRuleText}
+                        onChange={(e) => setNewRuleText(e.target.value)}
+                        placeholder="Type your rule in plain English..."
+                        className="w-full h-24 px-3 py-2 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-3"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setIsCreatingStandaloneRule(false);
+                            setNewRuleText('');
+                          }}
+                          className="flex-1 text-muted-foreground"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={createStandaloneRule}
+                          className="flex-1 bg-primary hover:bg-primary/90"
+                          disabled={!newRuleText.trim()}
+                        >
+                          Create Rule
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {projectRules.length === 0 && !isCreatingStandaloneRule && (
                     <div className="text-center py-8">
                       <RefreshCw className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-sm text-muted-foreground">No rules created yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">Create rules from issues to prevent them in the future</p>
+                      <p className="text-xs text-muted-foreground mt-1">Create rules to validate and organize your data</p>
                     </div>
-                  ) : (
-                    projectRules.map((rule) => (
-                      <div key={rule.id} className="bg-muted/20 rounded-lg p-4 hover:bg-muted/30 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm text-foreground leading-relaxed">
-                              • {rule.naturalLanguage}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Created {rule.createdAt.toLocaleDateString()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteRule(rule.id)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
                   )}
+                  
+                  {projectRules.map((rule) => (
+                    <div key={rule.id} className="bg-muted/20 rounded-lg p-4 hover:bg-muted/30 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm text-foreground leading-relaxed">
+                            • {rule.naturalLanguage}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Created {rule.createdAt.toLocaleDateString()}
+                            {rule.relatedIssueType && (
+                              <span className="ml-2 text-xs text-blue-600">
+                                (from {rule.relatedIssueType.replace(/_/g, ' ')})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteRule(rule.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Footer with Create Button */}
               <div className="p-6 border-t border-border">
-                <Button
-                  onClick={() => {
-                    setShowRulesPanel(false);
-                    // Could open a general rule creation modal here
-                  }}
-                  variant="outline"
-                  className="w-full h-9 text-sm font-medium bg-primary/5 hover:bg-primary/10 text-primary border-primary/20 hover:border-primary/30"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Rule
-                </Button>
+                {!isCreatingStandaloneRule ? (
+                  <Button
+                    onClick={() => {
+                      setIsCreatingStandaloneRule(true);
+                      setNewRuleText('');
+                    }}
+                    variant="outline"
+                    className="w-full h-9 text-sm font-medium bg-primary/5 hover:bg-primary/10 text-primary border-primary/20 hover:border-primary/30"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create New Rule
+                  </Button>
+                ) : null}
               </div>
             </div>
           </motion.div>

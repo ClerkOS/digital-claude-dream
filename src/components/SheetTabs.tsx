@@ -14,7 +14,6 @@ export function SheetTabs() {
 
   const handleAddSheet = () => {
     // Add new sheet functionality would go here
-    console.log('Add new sheet');
   };
 
   return (

@@ -53,18 +53,13 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
   // Load workbook data if workbookId is provided, otherwise load sample data
   useEffect(() => {
     const loadData = async () => {
-      console.log('loadData called:', { workbookId, hasWorkbook: !!workbook });
-      
       if (workbookId) {
         if (!workbook) {
-          console.log('Loading workbook with ID:', workbookId);
           await refreshWorkbook(workbookId);
         }
       } else if (!workbook) {
         // Only load sample data if no workbook exists
-        console.log('Loading sample data...');
         const csvContent = sampleFinancialData.map(row => row.join(',')).join('\n');
-        console.log('CSV Content length:', csvContent.length);
         const sampleFile = {
           name: 'Sample Financial Data',
           content: csvContent,
@@ -72,7 +67,6 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
         };
         try {
           await loadFromFile(sampleFile);
-          console.log('Sample data loaded successfully');
         } catch (error) {
           console.error('Failed to load sample data:', error);
         }
@@ -174,12 +168,9 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
               <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileSpreadsheet className="w-8 h-8" />
               </div>
-              <p>Debug: workbook is {workbook ? 'loaded' : 'null'}</p>
-              <p>Debug: isLoading is {isLoading ? 'true' : 'false'}</p>
-              <p>Debug: workbookId is {workbookId || 'null'}</p>
+              <p>No spreadsheet data available</p>
               <Button 
                 onClick={async () => {
-                  console.log('Manual load button clicked');
                   const csvContent = sampleFinancialData.map(row => row.join(',')).join('\n');
                   const sampleFile = {
                     name: 'Sample Financial Data',
@@ -188,7 +179,6 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
                   };
                   try {
                     await loadFromFile(sampleFile);
-                    console.log('Manual load completed');
                   } catch (error) {
                     console.error('Manual load failed:', error);
                   }
