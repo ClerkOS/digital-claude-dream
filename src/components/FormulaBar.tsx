@@ -44,28 +44,29 @@ export function FormulaBar() {
   };
 
   return (
-    <div className="border-b border-border/50 p-2 bg-muted/30">
-      <div className="flex items-center gap-2">
-        <div className="text-xs font-mono text-muted-foreground min-w-[60px]">
+    <div className="border-b border-border/50 px-6 py-2.5 bg-muted/20">
+      <div className="flex items-center gap-3">
+        <div className="text-xs font-mono text-muted-foreground min-w-[60px] font-medium">
           {activeCell || 'A1'}
         </div>
-        <div className="flex-1">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-xs text-muted-foreground">=</span>
           {isEditing ? (
             <Input
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleEditCommit}
-              className="h-6 text-xs font-mono border-0 bg-background"
+              className="h-8 text-xs font-mono border border-border/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-background"
               placeholder="Enter value or formula..."
               autoFocus
             />
           ) : (
             <div
-              className="h-6 px-2 text-xs font-mono bg-background border border-border/50 rounded flex items-center cursor-text hover:bg-muted/50"
+              className="h-8 px-3 text-xs font-mono bg-background border border-border/50 rounded-md flex items-center cursor-text hover:bg-muted/30 hover:border-border transition-colors flex-1"
               onClick={handleEditStart}
             >
-              {cellData?.value || ''}
+              <span className="text-foreground">{cellData?.value || ''}</span>
             </div>
           )}
         </div>

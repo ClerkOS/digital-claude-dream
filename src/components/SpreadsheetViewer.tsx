@@ -94,13 +94,13 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
   return (
     <div className={`h-full flex flex-col bg-background ${className}`}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-green-500/10 rounded-md flex items-center justify-center">
-            <FileSpreadsheet className="w-4 h-4 text-green-600" />
+          <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+            <FileSpreadsheet className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-sm font-medium">{workbook?.name || 'Sample Financial Data'}</h3>
+            <h3 className="text-sm font-semibold text-foreground">{workbook?.name || 'Sample Financial Data'}</h3>
             <p className="text-xs text-muted-foreground">
               {workbook ? `${workbook.sheets.length} sheet${workbook.sheets.length !== 1 ? 's' : ''}` : 'Loading...'}
             </p>
@@ -111,13 +111,18 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
             variant="outline" 
             size="sm" 
             onClick={() => setShowSearch(!showSearch)}
-            className="h-8 px-3"
+            className="h-9 px-3 text-xs font-medium hover:bg-primary/5 hover:border-primary/30"
           >
-            <Search className="w-3 h-3 mr-1" />
+            <Search className="w-3 h-3 mr-1.5" />
             Search
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownload} className="h-8 px-3">
-            <Download className="w-3 h-3 mr-1" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDownload} 
+            className="h-9 px-3 text-xs font-medium hover:bg-primary/5 hover:border-primary/30"
+          >
+            <Download className="w-3 h-3 mr-1.5" />
             Export
           </Button>
         </div>
@@ -125,13 +130,13 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
 
       {/* Search Bar */}
       {showSearch && (
-        <div className="border-b border-border p-3">
+        <div className="border-b border-border/50 px-6 py-3 bg-muted/20">
           <Input
             type="text"
             placeholder="Search in spreadsheet..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
+            className="w-full h-9"
           />
         </div>
       )}
@@ -140,25 +145,25 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
       <FormulaBar />
 
       {/* Spreadsheet Content */}
-      <div className="flex-1 overflow-hidden bg-background flex flex-col">
+      <div className="flex-1 overflow-hidden bg-muted/20 flex flex-col p-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground">
             <div className="text-center">
               <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileSpreadsheet className="w-8 h-8 animate-pulse" />
               </div>
-              <p>Loading spreadsheet...</p>
+              <p className="text-sm">Loading spreadsheet...</p>
             </div>
           </div>
         ) : workbook ? (
           <>
             {/* Spreadsheet Grid */}
-            <div className="flex-1 p-4 pb-1 min-h-0">
+            <div className="flex-1 min-h-0 mb-4">
               <SpreadsheetGrid className="h-full" />
             </div>
             
             {/* Sheet Tabs */}
-            <div className="flex-shrink-0 px-4 pb-4">
+            <div className="flex-shrink-0">
               <SheetTabs />
             </div>
           </>
@@ -168,7 +173,7 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
               <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileSpreadsheet className="w-8 h-8" />
               </div>
-              <p>No spreadsheet data available</p>
+              <p className="text-sm mb-4">No spreadsheet data available</p>
               <Button 
                 onClick={async () => {
                   const csvContent = sampleFinancialData.map(row => row.join(',')).join('\n');
@@ -183,7 +188,8 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
                     console.error('Manual load failed:', error);
                   }
                 }}
-                className="mt-4"
+                variant="outline"
+                className="h-9 px-4"
               >
                 Load Sample Data
               </Button>

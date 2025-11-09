@@ -130,7 +130,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
   return (
     <div 
       ref={gridRef}
-      className={`border border-border/50 rounded-lg overflow-hidden ${className}`}
+      className={`border-0 shadow-sm rounded-lg overflow-hidden bg-background ${className}`}
     >
       <div
         ref={scrollContainerRef}
@@ -138,14 +138,14 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
         onScroll={handleScroll}
       >
         {/* Column Headers */}
-        <div className="flex sticky top-0 bg-muted/50 border-b border-border/50">
-          <div className="w-8 h-7 bg-muted/50 border-r border-border/50 flex items-center justify-center text-xs text-muted-foreground font-mono">
+        <div className="flex sticky top-0 bg-muted/50 border-b border-border/50 z-10">
+          <div className="w-10 h-8 bg-muted/50 border-r border-border/50 flex items-center justify-center text-xs text-muted-foreground font-mono font-medium">
             #
           </div>
           {Array.from({ length: columnCount }, (_, i) => (
             <div
               key={i}
-              className="w-24 h-7 border-r border-border/50 flex items-center justify-center text-xs text-muted-foreground font-mono bg-muted/30"
+              className="w-24 h-8 border-r border-border/50 flex items-center justify-center text-xs text-muted-foreground font-mono font-medium bg-muted/30"
             >
               {String.fromCharCode(65 + i)}
             </div>
@@ -157,7 +157,7 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
           {activeSheet.rows.map((row, rowIndex) => (
             <div key={rowIndex} className="flex">
               {/* Row Header */}
-              <div className="w-8 h-7 bg-muted/50 border-r border-border/50 border-b border-border/50 flex items-center justify-center text-xs text-muted-foreground font-mono">
+              <div className="w-10 h-8 bg-muted/50 border-r border-border/50 border-b border-border/50 flex items-center justify-center text-xs text-muted-foreground font-mono font-medium">
                 {rowIndex + 1}
               </div>
               
@@ -172,11 +172,13 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
                   <div
                     key={colIndex}
                     className={`
-                      w-24 h-7 border-r border-border/50 border-b border-border/50 
-                      flex items-center px-1 text-xs font-mono
-                      ${isActive ? 'bg-blue-100 dark:bg-blue-900/20' : ''}
-                      ${isSelected ? 'bg-muted' : ''}
-                      hover:bg-muted/50 cursor-pointer
+                      w-24 h-8 border-r border-border/50 border-b border-border/50 
+                      flex items-center px-2 text-xs font-mono bg-background
+                      transition-colors duration-150
+                      ${isActive ? 'bg-primary/10 ring-1 ring-primary/20' : ''}
+                      ${isSelected && !isActive ? 'bg-muted/50' : ''}
+                      ${!isActive && !isSelected ? 'hover:bg-muted/30' : ''}
+                      cursor-pointer
                     `}
                     onClick={() => handleCellClick(rowIndex, colIndex)}
                     onDoubleClick={() => handleCellDoubleClick(rowIndex, colIndex)}
@@ -187,11 +189,11 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
                         onChange={(e) => handleEditValueChange(e.target.value)}
                         onKeyDown={handleKeyDown}
                         onBlur={handleEditCommit}
-                        className="h-6 px-1 text-xs font-mono border-0 focus-visible:ring-0"
+                        className="h-6 px-1 text-xs font-mono border-0 focus-visible:ring-1 focus-visible:ring-primary/50 bg-background"
                         autoFocus
                       />
                     ) : (
-                      <span className="truncate">{cell.value || ''}</span>
+                      <span className="truncate text-foreground">{cell.value || ''}</span>
                     )}
                   </div>
                 );

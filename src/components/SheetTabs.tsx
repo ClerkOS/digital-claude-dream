@@ -17,8 +17,8 @@ export function SheetTabs() {
   };
 
   return (
-    <div className="border-t border-border/50 bg-muted/30">
-      <div className="flex items-center">
+    <div className="border-0 rounded-lg bg-background shadow-sm">
+      <div className="flex items-center border border-border/50 rounded-lg overflow-hidden">
         {/* Sheet Tabs */}
         <div className="flex-1 flex overflow-x-auto">
           {workbook.sheets.map((sheet) => (
@@ -26,11 +26,11 @@ export function SheetTabs() {
               key={sheet.id}
               onClick={() => handleSheetClick(sheet.id)}
               className={cn(
-                "px-3 py-2 text-sm font-medium border-r border-border/50 transition-colors",
-                "hover:bg-muted/50 whitespace-nowrap",
+                "px-4 py-2.5 text-sm font-medium border-r border-border/50 transition-colors",
+                "hover:bg-muted/30 whitespace-nowrap",
                 activeSheetId === sheet.id
-                  ? "bg-background text-foreground border-b-2 border-b-foreground"
-                  : "text-muted-foreground"
+                  ? "bg-primary/10 text-primary border-b-2 border-b-primary font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {sheet.name}
@@ -43,7 +43,7 @@ export function SheetTabs() {
           variant="ghost"
           size="sm"
           onClick={handleAddSheet}
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l border-border/50 rounded-none"
         >
           <Plus className="h-4 w-4" />
         </Button>
