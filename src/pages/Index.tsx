@@ -6,12 +6,14 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { UploadProcessing } from '@/components/UploadProcessing';
 import { Project } from '@/types/chat';
+import { STORAGE_KEYS, UPLOAD_CONFIG } from '@/constants';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 type AppState = 'empty' | 'dashboard' | 'chat' | 'uploading';
 
 const Index = () => {
   const [appState, setAppState] = useState<AppState>('empty');
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useLocalStorage<Project[]>(STORAGE_KEYS.PROJECTS, []);
   const [activeProjectId, setActiveProjectId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -23,30 +25,17 @@ const Index = () => {
     processingMessage: string;
   } | null>(null);
 
-  // Load projects from localStorage on mount
+  // Load active project on mount
   useEffect(() => {
-    const savedProjects = localStorage.getItem('zigma-projects');
-    if (savedProjects) {
-      const parsedProjects = JSON.parse(savedProjects);
-      setProjects(parsedProjects);
-      if (parsedProjects.length > 0) {
-        setActiveProjectId(parsedProjects[0].id);
-        setAppState('dashboard');
-      }
+    if (projects.length > 0 && !activeProjectId) {
+      setActiveProjectId(projects[0].id);
+      setAppState('dashboard');
     }
-  }, []);
-
-  // Save projects to localStorage whenever projects change
-  useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem('zigma-projects', JSON.stringify(projects));
-    }
-  }, [projects]);
+  }, [projects, activeProjectId]);
 
   const activeProject = projects.find(p => p.id === activeProjectId);
 
   const handleFileUpload = async (files: any[]) => {
-    // Start upload simulation
     setUploadState({
       files,
       progress: 0,
@@ -55,16 +44,9 @@ const Index = () => {
     });
     setAppState('uploading');
 
-    // Processing messages in sequence
-    const processingMessages = [
-      'Analyzing structure…',
-      'Matching references…',
-      'Balancing books…'
-    ];
-
-    // Simulate upload progress
-    const uploadDuration = 2000; // milliseconds - slower upload
-    const progressInterval = 50;
+    const processingMessages = UPLOAD_CONFIG.PROCESSING_MESSAGES;
+    const uploadDuration = UPLOAD_CONFIG.DURATION;
+    const progressInterval = UPLOAD_CONFIG.PROGRESS_INTERVAL;
     let currentProgress = 0;
 
     const uploadTimer = setInterval(() => {
@@ -73,7 +55,6 @@ const Index = () => {
         currentProgress = 100;
         clearInterval(uploadTimer);
         
-        // Transition to processing with first message
         setUploadState(prev => prev ? { 
           ...prev, 
           progress: 100, 
@@ -81,7 +62,6 @@ const Index = () => {
           processingMessage: processingMessages[0]
         } : null);
         
-        // Cycle through processing messages
         processingMessages.forEach((message, index) => {
           if (index > 0) {
             setTimeout(() => {
@@ -89,17 +69,14 @@ const Index = () => {
                 ...prev, 
                 processingMessage: message 
               } : null);
-            }, (2500 / processingMessages.length) * index);
+            }, (UPLOAD_CONFIG.PROCESSING_DELAY / processingMessages.length) * index);
           }
         });
         
-        // After all processing messages, show complete
         setTimeout(() => {
           setUploadState(prev => prev ? { ...prev, stage: 'complete' } : null);
           
-          // After brief success state, transition to dashboard with fade
           setTimeout(() => {
-            // Create or update project
             if (!activeProjectId) {
               const newProject: Project = {
                 id: `project-${Date.now()}`,
@@ -119,7 +96,6 @@ const Index = () => {
               setProjects(prev => [newProject, ...prev]);
               setActiveProjectId(newProject.id);
             } else {
-              // Add files to existing project
               setProjects(prev => prev.map(p => 
                 p.id === activeProjectId 
                   ? {
@@ -136,11 +112,10 @@ const Index = () => {
               ));
             }
 
-            // Clear upload state and transition to dashboard
             setUploadState(null);
             setAppState('dashboard');
-          }, 800); // Brief success state
-        }, 2500); // Processing with all messages
+          }, UPLOAD_CONFIG.SUCCESS_DELAY);
+        }, UPLOAD_CONFIG.PROCESSING_DELAY);
       } else {
         setUploadState(prev => prev ? { ...prev, progress: currentProgress } : null);
       }
