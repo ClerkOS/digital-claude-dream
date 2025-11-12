@@ -1,125 +1,93 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { EmptyState } from '@/components/EmptyState';
 import { Dashboard } from '@/components/Dashboard';
 import { ChatInterface } from '@/components/ChatInterface';
 import { ChatSidebar } from '@/components/ChatSidebar';
-import { UploadProcessing } from '@/components/UploadProcessing';
+import { PipelineContainer } from '@/components/pipeline/PipelineContainer';
 import { Project } from '@/types/chat';
-import { STORAGE_KEYS, UPLOAD_CONFIG } from '@/constants';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { STORAGE_KEYS } from '@/constants';
 
-type AppState = 'empty' | 'dashboard' | 'chat' | 'uploading';
+type AppState = 'empty' | 'dashboard' | 'chat' | 'pipeline';
 
 const Index = () => {
   const [appState, setAppState] = useState<AppState>('empty');
-  const [projects, setProjects] = useLocalStorage<Project[]>(STORAGE_KEYS.PROJECTS, []);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Upload processing state
-  const [uploadState, setUploadState] = useState<{
-    files: Array<{ file: File }>;
-    progress: number;
-    stage: 'uploading' | 'processing' | 'complete';
-    processingMessage: string;
-  } | null>(null);
 
-  // Load active project on mount
+  // Load projects from localStorage on mount
   useEffect(() => {
-    if (projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(projects[0].id);
-      setAppState('dashboard');
+    const savedProjects = localStorage.getItem(STORAGE_KEYS.PROJECTS);
+    if (savedProjects) {
+      try {
+        const parsedProjects = JSON.parse(savedProjects);
+        setProjects(parsedProjects);
+        if (parsedProjects.length > 0 && !activeProjectId) {
+          const firstProject = parsedProjects[0];
+          setActiveProjectId(firstProject.id);
+          // Start with dashboard for existing projects with data, empty state for empty projects
+          if (firstProject.files.length > 0 || firstProject.workbookId) {
+            setAppState('dashboard');
+          } else {
+            setAppState('empty');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load projects:', e);
+      }
     }
-  }, [projects, activeProjectId]);
+  }, [activeProjectId]);
+
+  // Save projects to localStorage whenever projects change
+  useEffect(() => {
+    if (projects.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    }
+  }, [projects]);
 
   const activeProject = projects.find(p => p.id === activeProjectId);
 
   const handleFileUpload = async (files: any[]) => {
-    setUploadState({
-      files,
-      progress: 0,
-      stage: 'uploading',
-      processingMessage: ''
-    });
-    setAppState('uploading');
+    // Create or update project with uploaded files immediately
+    if (!activeProjectId) {
+      const newProject: Project = {
+        id: `project-${Date.now()}`,
+        name: 'New Project',
+        timestamp: 'Just now',
+        preview: 'New project created',
+        messages: [],
+        files: files.map(file => ({
+          name: file.file.name,
+          size: file.file.size,
+          type: file.file.type,
+          uploadedAt: new Date().toISOString(),
+        })),
+        lastActivity: 'Just now',
+      };
 
-    const processingMessages = UPLOAD_CONFIG.PROCESSING_MESSAGES;
-    const uploadDuration = UPLOAD_CONFIG.DURATION;
-    const progressInterval = UPLOAD_CONFIG.PROGRESS_INTERVAL;
-    let currentProgress = 0;
-
-    const uploadTimer = setInterval(() => {
-      currentProgress += (progressInterval / uploadDuration) * 100;
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(uploadTimer);
-        
-        setUploadState(prev => prev ? { 
-          ...prev, 
-          progress: 100, 
-          stage: 'processing',
-          processingMessage: processingMessages[0]
-        } : null);
-        
-        processingMessages.forEach((message, index) => {
-          if (index > 0) {
-            setTimeout(() => {
-              setUploadState(prev => prev ? { 
-                ...prev, 
-                processingMessage: message 
-              } : null);
-            }, (UPLOAD_CONFIG.PROCESSING_DELAY / processingMessages.length) * index);
-          }
-        });
-        
-        setTimeout(() => {
-          setUploadState(prev => prev ? { ...prev, stage: 'complete' } : null);
-          
-          setTimeout(() => {
-            if (!activeProjectId) {
-              const newProject: Project = {
-                id: `project-${Date.now()}`,
-                name: 'New Project',
-                timestamp: 'Just now',
-                preview: 'New project created',
-                messages: [],
-                files: files.map(file => ({
-                  name: file.file.name,
-                  size: file.file.size,
-                  type: file.file.type,
-                  uploadedAt: new Date().toISOString(),
-                })),
-                lastActivity: 'Just now',
-              };
-
-              setProjects(prev => [newProject, ...prev]);
-              setActiveProjectId(newProject.id);
-            } else {
-              setProjects(prev => prev.map(p => 
-                p.id === activeProjectId 
-                  ? {
-                      ...p,
-                      files: [...p.files, ...files.map(file => ({
-                        name: file.file.name,
-                        size: file.file.size,
-                        type: file.file.type,
-                        uploadedAt: new Date().toISOString(),
-                      }))],
-                      lastActivity: 'Just now'
-                    }
-                  : p
-              ));
+      setProjects(prev => [newProject, ...prev]);
+      setActiveProjectId(newProject.id);
+    } else {
+      setProjects(prev => prev.map(p => 
+        p.id === activeProjectId 
+          ? {
+              ...p,
+              files: [...p.files, ...files.map(file => ({
+                name: file.file.name,
+                size: file.file.size,
+                type: file.file.type,
+                uploadedAt: new Date().toISOString(),
+              }))],
+              lastActivity: 'Just now'
             }
+          : p
+      ));
+    }
 
-            setUploadState(null);
-            setAppState('dashboard');
-          }, UPLOAD_CONFIG.SUCCESS_DELAY);
-        }, UPLOAD_CONFIG.PROCESSING_DELAY);
-      } else {
-        setUploadState(prev => prev ? { ...prev, progress: currentProgress } : null);
-      }
-    }, progressInterval);
+    // Go directly to pipeline - it will handle showing the processing steps
+    setAppState('pipeline');
   };
 
   const handleConnectSource = () => {
@@ -139,12 +107,21 @@ const Index = () => {
 
     setProjects(prev => [newProject, ...prev]);
     setActiveProjectId(newProject.id);
-    // Don't set appState - let the render logic handle showing EmptyState for empty projects
+    // Route to empty state (old upload center) for new project
+    setAppState('empty');
   };
 
   const handleSelectProject = (projectId: string) => {
     setActiveProjectId(projectId);
-    // Don't set appState - let the render logic handle showing EmptyState for empty projects
+    const selectedProject = projects.find(p => p.id === projectId);
+    // Route to appropriate state based on project data
+    if (selectedProject) {
+      if (selectedProject.files.length > 0 || selectedProject.workbookId) {
+        setAppState('dashboard');
+      } else {
+        setAppState('empty');
+      }
+    }
   };
 
   const handleRenameProject = (projectId: string, newName: string) => {
@@ -200,7 +177,7 @@ const Index = () => {
 
   return (
     <div className="h-screen w-full flex">
-      {/* Sidebar */}
+      {/* Sidebar - Show when we have projects */}
       {projects.length > 0 && (
         <ChatSidebar
           isOpen={sidebarOpen}
@@ -216,56 +193,123 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="flex-1">
-        {appState === 'uploading' && uploadState && (
-          <UploadProcessing
-            files={uploadState.files}
-            progress={uploadState.progress}
-            stage={uploadState.stage}
-            processingMessage={uploadState.processingMessage}
-          />
-        )}
-
-        {appState === 'empty' && (
-          <EmptyState
-            onFileUpload={handleFileUpload}
-            onConnectSource={handleConnectSource}
-          />
-        )}
-
-        {((appState === 'dashboard' && activeProject) || (activeProject && appState !== 'chat')) && (
-          activeProject.files.length > 0 || activeProject.workbookId ? (
+        <AnimatePresence mode="wait">
+          {appState === 'empty' && (
             <motion.div
+              key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
+              exit={{ opacity: 0 }}
               className="h-full"
             >
-              <Dashboard
-                project={activeProject}
-                onOpenSpreadsheet={handleOpenSpreadsheet}
-                onOpenChat={handleOpenChat}
-                onUploadFiles={handleUploadFiles}
+              <EmptyState
+                onFileUpload={handleFileUpload}
+                onConnectSource={handleConnectSource}
               />
             </motion.div>
-          ) : (
-            <EmptyState
-              onFileUpload={handleFileUpload}
-              onConnectSource={handleConnectSource}
-            />
-          )
-        )}
+          )}
 
-        {appState === 'chat' && activeProject && (
-          <ChatInterface
-            project={activeProject}
-            onBackToDashboard={handleBackToDashboard}
-            onUpdateProject={(updatedProject) => {
-              setProjects(prev => prev.map(p => 
-                p.id === updatedProject.id ? updatedProject : p
-              ));
-            }}
-          />
-        )}
+          {appState === 'pipeline' && (
+            <motion.div
+              key={`pipeline-${activeProjectId || 'new'}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="h-full"
+            >
+              <PipelineContainer
+                onComplete={(workbookId) => {
+                  // Update the active project with workbookId if it exists
+                  if (activeProjectId) {
+                    setProjects(prev => prev.map(p => 
+                      p.id === activeProjectId 
+                        ? { ...p, workbookId, lastActivity: 'Just now' }
+                        : p
+                    ));
+                  } else {
+                    // Create new project if none exists
+                    const newProject: Project = {
+                      id: `project-${Date.now()}`,
+                      name: 'New Project',
+                      timestamp: 'Just now',
+                      preview: 'New project created',
+                      messages: [],
+                      files: [],
+                      workbookId,
+                      lastActivity: 'Just now',
+                    };
+                    setProjects(prev => [newProject, ...prev]);
+                    setActiveProjectId(newProject.id);
+                  }
+                  setAppState('dashboard');
+                }}
+                onNavigateToDashboard={() => {
+                  if (activeProject) {
+                    setAppState('dashboard');
+                  }
+                }}
+                onNavigateToRules={() => {
+                  if (activeProject) {
+                    setAppState('dashboard');
+                  }
+                }}
+              />
+            </motion.div>
+          )}
+
+          {appState === 'dashboard' && activeProject && (
+            activeProject.files.length > 0 || activeProject.workbookId ? (
+              <motion.div
+                key="dashboard"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="h-full"
+              >
+                <Dashboard
+                  project={activeProject}
+                  onOpenSpreadsheet={handleOpenSpreadsheet}
+                  onOpenChat={handleOpenChat}
+                  onUploadFiles={handleUploadFiles}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty-project"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full"
+              >
+                <EmptyState
+                  onFileUpload={handleFileUpload}
+                  onConnectSource={handleConnectSource}
+                />
+              </motion.div>
+            )
+          )}
+
+          {appState === 'chat' && activeProject && (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <ChatInterface
+                project={activeProject}
+                onBackToDashboard={handleBackToDashboard}
+                onUpdateProject={(updatedProject) => {
+                  setProjects(prev => prev.map(p => 
+                    p.id === updatedProject.id ? updatedProject : p
+                  ));
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
