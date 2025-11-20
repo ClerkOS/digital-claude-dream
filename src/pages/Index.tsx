@@ -6,6 +6,7 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { UploadProcessing } from '@/components/UploadProcessing';
 import { DataPipelineProgress, PipelineStep } from '@/components/DataPipelineProgress';
+import { DetachedSheetsRenderer } from '@/components/SheetTabs';
 import { Project } from '@/types/chat';
 import { STORAGE_KEYS, UPLOAD_CONFIG } from '@/constants';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -331,6 +332,9 @@ const Index = () => {
 
   return (
     <div className="h-screen w-full flex">
+      {/* Detached Sheets - Render at app level so they persist when main viewer closes */}
+      <DetachedSheetsRenderer />
+
       {/* Sidebar */}
       {projects.length > 0 && (
         <ChatSidebar

@@ -6,31 +6,7 @@ import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { SpreadsheetGrid } from './SpreadsheetGrid';
 import { FormulaBar } from './FormulaBar';
 import { SheetTabs } from './SheetTabs';
-
-// Sample financial data
-const sampleFinancialData = [
-  ['Date', 'Account', 'Description', 'Debit', 'Credit', 'Balance'],
-  ['2024-01-01', 'Cash', 'Initial Investment', '10000', '0', '10000'],
-  ['2024-01-02', 'Equipment', 'Office Equipment Purchase', '0', '2500', '7500'],
-  ['2024-01-03', 'Accounts Receivable', 'Sale to Customer A', '0', '1500', '9000'],
-  ['2024-01-04', 'Revenue', 'Sale Revenue', '0', '1500', '10500'],
-  ['2024-01-05', 'Office Supplies', 'Stationery Purchase', '0', '200', '10300'],
-  ['2024-01-06', 'Utilities', 'Electricity Bill', '0', '300', '10000'],
-  ['2024-01-07', 'Accounts Payable', 'Supplier Invoice', '0', '800', '9200'],
-  ['2024-01-08', 'Cash', 'Customer Payment', '1200', '0', '10400'],
-  ['2024-01-09', 'Salaries', 'Employee Salary', '0', '2000', '8400'],
-  ['2024-01-10', 'Revenue', 'Service Revenue', '0', '2500', '10900'],
-  ['2024-01-11', 'Rent Expense', 'Office Rent', '0', '1200', '9700'],
-  ['2024-01-12', 'Cash', 'Client Payment', '800', '0', '10500'],
-  ['2024-01-13', 'Marketing', 'Advertising Campaign', '0', '500', '10000'],
-  ['2024-01-14', 'Revenue', 'Product Sales', '0', '3200', '13200'],
-  ['2024-01-15', 'Insurance', 'Business Insurance', '0', '400', '12800'],
-  ['2024-01-16', 'Cash', 'Investment Return', '500', '0', '13300'],
-  ['2024-01-17', 'Travel', 'Business Trip', '0', '600', '12700'],
-  ['2024-01-18', 'Revenue', 'Consulting Fee', '0', '1800', '14500'],
-  ['2024-01-19', 'Software', 'SaaS Subscription', '0', '150', '14350'],
-  ['2024-01-20', 'Cash', 'Refund Received', '200', '0', '14550']
-];
+import { sampleFinancialData, dataToCSV } from '@/data/sampleSheets';
 
 interface SpreadsheetViewerProps {
   workbookId?: string;
@@ -59,7 +35,7 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
         }
       } else if (!workbook) {
         // Only load sample data if no workbook exists
-        const csvContent = sampleFinancialData.map(row => row.join(',')).join('\n');
+        const csvContent = dataToCSV(sampleFinancialData);
         const sampleFile = {
           name: 'Sample Financial Data',
           content: csvContent,
@@ -176,7 +152,7 @@ export function SpreadsheetViewer({ workbookId, className = '' }: SpreadsheetVie
               <p className="text-sm mb-4">No spreadsheet data available</p>
               <Button 
                 onClick={async () => {
-                  const csvContent = sampleFinancialData.map(row => row.join(',')).join('\n');
+                  const csvContent = dataToCSV(sampleFinancialData);
                   const sampleFile = {
                     name: 'Sample Financial Data',
                     content: csvContent,

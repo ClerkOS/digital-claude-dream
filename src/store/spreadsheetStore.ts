@@ -37,6 +37,11 @@ export interface GridViewport {
   endCol: number;
 }
 
+interface DetachedSheet {
+  sheetId: string;
+  position: { x: number; y: number };
+}
+
 interface SpreadsheetState {
   // Data
   workbook: Workbook | null;
@@ -48,6 +53,9 @@ interface SpreadsheetState {
   
   // Viewport
   gridViewport: GridViewport;
+  
+  // Detached sheets (independent of main viewer)
+  detachedSheets: Map<string, DetachedSheet>;
   
   // Actions
   setWorkbook: (workbook: Workbook | null) => void;
@@ -61,6 +69,11 @@ interface SpreadsheetState {
   updateCell: (cellId: string, value: any) => void;
   setGridViewport: (viewport: GridViewport) => void;
   refreshWorkbook: (workbookId: string) => Promise<void>;
+  
+  // Detached sheet actions
+  detachSheet: (sheetId: string, position?: { x: number; y: number }) => void;
+  closeDetachedSheet: (sheetId: string) => void;
+  updateDetachedSheetPosition: (sheetId: string, position: { x: number; y: number }) => void;
   
   // File operations
   loadFromFile: (file: { name: string; content: string; type: string }) => Promise<void>;
@@ -246,6 +259,7 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
         startCol: 0,
         endCol: 26
       },
+      detachedSheets: new Map(),
       
       // Actions
       setWorkbook: (workbook) => set({ workbook }),
@@ -429,6 +443,39 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
           console.error('Failed to load file:', error);
           set({ isLoading: false });
         }
+      },
+      
+      // Detached sheet actions
+      detachSheet: (sheetId, position) => {
+        const count = get().detachedSheets.size;
+        const defaultPosition = position || {
+          x: 50 + (count * 50),
+          y: 20 + (count * 50), // Start at top of screen
+        };
+        set((state) => {
+          const next = new Map(state.detachedSheets);
+          next.set(sheetId, { sheetId, position: defaultPosition });
+          return { detachedSheets: next };
+        });
+      },
+      
+      closeDetachedSheet: (sheetId) => {
+        set((state) => {
+          const next = new Map(state.detachedSheets);
+          next.delete(sheetId);
+          return { detachedSheets: next };
+        });
+      },
+      
+      updateDetachedSheetPosition: (sheetId, position) => {
+        set((state) => {
+          const next = new Map(state.detachedSheets);
+          const existing = next.get(sheetId);
+          if (existing) {
+            next.set(sheetId, { ...existing, position });
+          }
+          return { detachedSheets: next };
+        });
       },
       
       exportToCSV: () => {
