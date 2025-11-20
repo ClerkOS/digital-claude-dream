@@ -31,8 +31,12 @@ import { IssuesList } from './dashboard/IssuesList';
 import { ResolvedIssues } from './dashboard/ResolvedIssues';
 import { RulesPanel } from './dashboard/RulesPanel';
 import { SpreadsheetSlideOver } from './dashboard/SpreadsheetSlideOver';
+import { TransformationPreview } from './transformations/TransformationPreview';
+import { UndoTimeline } from './transformations/UndoTimeline';
 import { generateMockIssues } from '@/data/mockIssues';
 import { getAISuggestions } from '@/utils/dashboardHelpers';
+import { useTransformationStore, generatePreview } from '@/store/transformationStore';
+import type { TransformationAction } from '@/types/transformations';
 
 interface DashboardProps {
   project: Project;
@@ -219,28 +223,84 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     }
   }, [dataIssues]);
 
-  const createRule = useCallback((issueId: string) => {
+  const { showPreview, hidePreview, currentPreview, addAction, actions, timelineOpen, setTimelineOpen } = useTransformationStore();
+
+  const createRule = useCallback(async (issueId: string) => {
     if (!newRuleText.trim()) return;
 
     const issue = dataIssues.find(i => i.id === issueId);
     if (!issue) return;
 
+    // Show preview before creating rule
+    if (project.workbookId) {
+      try {
+        const preview = await generatePreview(
+          `rule-${Date.now()}`,
+          newRuleText,
+          project.workbookId,
+          'Sheet1'
+        );
+        showPreview(preview);
+        
+        // Store the rule data for when preview is approved
+        (window as any).pendingRule = {
+          issueId,
+          ruleText: newRuleText,
+          issue,
+        };
+        return;
+      } catch (error) {
+        console.error('Failed to generate preview:', error);
+        // Continue with rule creation even if preview fails
+      }
+    }
+
+    // If no preview needed or preview failed, create rule directly
+    await applyRuleCreation(issueId, newRuleText, issue);
+  }, [newRuleText, dataIssues, project.workbookId, showPreview]);
+
+  const applyRuleCreation = useCallback(async (issueId: string, ruleText: string, issue: DataIssue) => {
     const newRule: ProjectRule = {
       id: `rule-${Date.now()}`,
       createdAt: new Date(),
-      naturalLanguage: newRuleText,
+      naturalLanguage: ruleText,
       category: RULE_CATEGORIES.DATA_VALIDATION,
       scope: RULE_SCOPES.FUTURE_ONLY,
       isActive: true,
       appliedToRecords: 0,
-      relatedIssueType: issue.type
+      relatedIssueType: issue.type,
+      operations: [
+        {
+          type: 'transform',
+          field: 'PhoneNumber',
+          action: 'Trim whitespace, preserve extension codes, format to +233-XXXX-XXXX',
+        }
+      ]
     };
 
     setProjectRules(prev => [newRule, ...prev]);
     setNewRuleText('');
     setIssueCreatingRule(null);
 
-    showSystemBanner(`✨ Rule created: ${newRuleText}`);
+    // Add to action history
+    const action: TransformationAction = {
+      id: `action-${Date.now()}`,
+      type: 'rule_apply',
+      ruleId: newRule.id,
+      ruleName: ruleText,
+      description: `Applied rule: ${ruleText}`,
+      affectedRows: issue.count,
+      changes: [],
+      timestamp: new Date(),
+      canUndo: true,
+      undoAction: async () => {
+        setProjectRules(prev => prev.filter(r => r.id !== newRule.id));
+        setDataIssues(prev => [...prev, issue]);
+      },
+    };
+    addAction(action);
+
+    showSystemBanner(`✨ Rule created: ${ruleText}`);
 
     setPulsedIssueId(issueId);
     setTimeout(() => setPulsedIssueId(null), RULE_CREATION_DELAYS.PULSE_RESET);
@@ -248,7 +308,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     setTimeout(() => {
       handleResolveIssueByRule(issueId);
     }, RULE_CREATION_DELAYS.RESOLVE_ISSUE);
-  }, [newRuleText, dataIssues, showSystemBanner, handleResolveIssueByRule]);
+  }, [showSystemBanner, handleResolveIssueByRule, addAction, setProjectRules, setDataIssues]);
 
   const createStandaloneRule = useCallback(() => {
     if (!newRuleText.trim()) return;
@@ -271,7 +331,114 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
   }, [newRuleText, showSystemBanner]);
 
   const deleteRule = useCallback((ruleId: string) => {
+    const rule = projectRules.find(r => r.id === ruleId);
+    if (rule) {
+      const action: TransformationAction = {
+        id: `action-${Date.now()}`,
+        type: 'rule_delete',
+        ruleId: ruleId,
+        ruleName: rule.naturalLanguage,
+        description: `Deleted rule: ${rule.naturalLanguage}`,
+        affectedRows: 0,
+        changes: [],
+        timestamp: new Date(),
+        canUndo: true,
+        undoAction: async () => {
+          setProjectRules(prev => [...prev, rule]);
+        },
+      };
+      addAction(action);
+    }
     setProjectRules(prev => prev.filter(rule => rule.id !== ruleId));
+  }, [projectRules, addAction]);
+
+  const handleRunRule = useCallback(async (ruleId: string) => {
+    const rule = projectRules.find(r => r.id === ruleId);
+    if (!rule || !project.workbookId) return;
+
+    // Show preview before running
+    try {
+      const preview = await generatePreview(
+        ruleId,
+        rule.naturalLanguage,
+        project.workbookId,
+        'Sheet1'
+      );
+      showPreview(preview);
+      (window as any).pendingRuleRun = ruleId;
+    } catch (error) {
+      console.error('Failed to generate preview:', error);
+    }
+  }, [projectRules, project.workbookId, showPreview]);
+
+  const handleEditRule = useCallback((ruleId: string) => {
+    const rule = projectRules.find(r => r.id === ruleId);
+    if (rule) {
+      setNewRuleText(rule.naturalLanguage);
+      setIsCreatingStandaloneRule(true);
+      // TODO: Implement proper edit flow
+    }
+  }, [projectRules]);
+
+  const handleToggleActive = useCallback((ruleId: string) => {
+    setProjectRules(prev => prev.map(rule =>
+      rule.id === ruleId ? { ...rule, isActive: !rule.isActive } : rule
+    ));
+  }, []);
+
+  const handleApprovePreview = useCallback(async () => {
+    if (!currentPreview) return;
+
+    const pendingRule = (window as any).pendingRule;
+    const pendingRuleRun = (window as any).pendingRuleRun;
+
+    if (pendingRule) {
+      await applyRuleCreation(pendingRule.issueId, pendingRule.ruleText, pendingRule.issue);
+      delete (window as any).pendingRule;
+    } else if (pendingRuleRun) {
+      // Apply the rule run
+      const rule = projectRules.find(r => r.id === pendingRuleRun);
+      if (rule) {
+        const action: TransformationAction = {
+          id: `action-${Date.now()}`,
+          type: 'rule_apply',
+          ruleId: rule.id,
+          ruleName: rule.naturalLanguage,
+          description: `Ran rule: ${rule.naturalLanguage}`,
+          affectedRows: currentPreview.affectedRows,
+          changes: currentPreview.affectedCells,
+          timestamp: new Date(),
+          canUndo: true,
+          undoAction: async () => {
+            // Revert changes - would need to store original values
+            console.log('Undoing rule application');
+          },
+        };
+        addAction(action);
+        setProjectRules(prev => prev.map(r =>
+          r.id === rule.id ? { ...r, appliedToRecords: r.appliedToRecords + currentPreview.affectedRows } : r
+        ));
+      }
+      delete (window as any).pendingRuleRun;
+    }
+
+    hidePreview();
+  }, [currentPreview, projectRules, applyRuleCreation, addAction, hidePreview]);
+
+  const handleRejectPreview = useCallback(() => {
+    delete (window as any).pendingRule;
+    delete (window as any).pendingRuleRun;
+    hidePreview();
+  }, [hidePreview]);
+
+  const handleEditPreview = useCallback(() => {
+    // TODO: Open rule editor
+    hidePreview();
+  }, [hidePreview]);
+
+  const handleUndoAction = useCallback(async (actionId: string) => {
+    const { undoAction } = useTransformationStore.getState();
+    await undoAction(actionId);
   }, []);
 
   const handleQuickAction = useCallback((actionId: string, issue: DataIssue) => {
@@ -333,6 +500,24 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         <SystemBanner message={systemBannerMessage} isVisible={systemBannerVisible} />
       </div>
 
+      {/* Preview Modal */}
+      {currentPreview && (
+        <TransformationPreview
+          preview={currentPreview}
+          onApprove={handleApprovePreview}
+          onReject={handleRejectPreview}
+          onEdit={handleEditPreview}
+        />
+      )}
+
+      {/* Undo Timeline */}
+      <UndoTimeline
+        actions={actions}
+        onUndo={handleUndoAction}
+        isOpen={timelineOpen}
+        onClose={() => setTimelineOpen(false)}
+      />
+
       <RulesPanel
         isOpen={showRulesPanel}
         projectName={project.name}
@@ -351,6 +536,10 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         onCreateRule={createStandaloneRule}
         onDeleteRule={deleteRule}
         onRuleTextChange={setNewRuleText}
+        onEditRule={handleEditRule}
+        onRunRule={handleRunRule}
+        onToggleActive={handleToggleActive}
+        workbookId={project.workbookId}
       />
 
       <SpreadsheetSlideOver

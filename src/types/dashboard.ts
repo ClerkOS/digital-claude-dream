@@ -49,5 +49,13 @@ export interface ProjectRule {
   isActive: boolean;
   appliedToRecords: number;
   relatedIssueType?: string;
+  // New fields for preview and undo system
+  operations?: Array<{
+    type: 'transform' | 'validate' | 'categorize' | 'filter';
+    field: string;
+    action: string;
+    parameters?: Record<string, any>;
+  }>;
+  order?: number; // For reordering
 }
 

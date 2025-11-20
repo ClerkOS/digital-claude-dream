@@ -1,7 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Plus, X } from 'lucide-react';
+import { RefreshCw, Plus, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { RuleBlock } from '@/components/transformations/RuleBlock';
+import { useTransformationStore } from '@/store/transformationStore';
 import type { ProjectRule } from '@/types/dashboard';
 
 interface RulesPanelProps {
@@ -16,6 +18,11 @@ interface RulesPanelProps {
   onCreateRule: () => void;
   onDeleteRule: (ruleId: string) => void;
   onRuleTextChange: (text: string) => void;
+  onEditRule?: (ruleId: string) => void;
+  onRunRule?: (ruleId: string) => void;
+  onToggleActive?: (ruleId: string) => void;
+  onReorderRules?: (ruleId: string, newIndex: number) => void;
+  workbookId?: string;
 }
 
 export function RulesPanel({
@@ -30,8 +37,23 @@ export function RulesPanel({
   onCreateRule,
   onDeleteRule,
   onRuleTextChange,
+  onEditRule,
+  onRunRule,
+  onToggleActive,
+  onReorderRules,
+  workbookId,
 }: RulesPanelProps) {
+  const { setTimelineOpen, timelineOpen } = useTransformationStore();
+  
   if (!isOpen) return null;
+
+  // Sort rules by order if available, otherwise by creation date
+  const sortedRules = [...rules].sort((a, b) => {
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order;
+    }
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
 
   return (
     <AnimatePresence>
@@ -48,14 +70,25 @@ export function RulesPanel({
               <h2 className="text-lg font-semibold text-foreground">Rules</h2>
               <p className="text-sm text-muted-foreground">{projectName}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
-              ×
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTimelineOpen(!timelineOpen)}
+                className="h-8 text-xs"
+              >
+                <Clock className="h-4 w-4 mr-1" />
+                Timeline
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="h-8 w-8 p-0"
+              >
+                ×
+              </Button>
+            </div>
           </div>
           
           <div className="flex-1 p-6 overflow-y-auto">
@@ -106,32 +139,17 @@ export function RulesPanel({
                 </div>
               )}
               
-              {rules.map((rule) => (
-                <div key={rule.id} className="bg-muted/20 rounded-lg p-4 hover:bg-muted/30 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm text-foreground leading-relaxed">
-                        • {rule.naturalLanguage}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Created {rule.createdAt.toLocaleDateString()}
-                        {rule.relatedIssueType && (
-                          <span className="ml-2 text-xs text-blue-600">
-                            (from {rule.relatedIssueType.replace(/_/g, ' ')})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteRule(rule.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
+              {sortedRules.map((rule, index) => (
+                <RuleBlock
+                  key={rule.id}
+                  rule={rule}
+                  index={index}
+                  onEdit={onEditRule || (() => {})}
+                  onDelete={onDeleteRule}
+                  onReorder={onReorderRules || (() => {})}
+                  onRun={onRunRule || (() => {})}
+                  onToggleActive={onToggleActive || (() => {})}
+                />
               ))}
             </div>
           </div>

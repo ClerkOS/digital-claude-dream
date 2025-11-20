@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, FileText, Sparkles } from 'lucide-react';
+import { Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileUpload } from './FileUpload';
+import { ZigmaLogo } from './ZigmaLogo';
 
 interface EmptyStateProps {
   onFileUpload: (files: any[]) => void;
@@ -41,8 +42,8 @@ export function EmptyState({ onFileUpload, onConnectSource }: EmptyStateProps) {
         transition={{ duration: 0.4 }}
         className="text-center mb-16 max-w-md"
       >
-        <div className="w-12 h-12 bg-foreground rounded-lg flex items-center justify-center mx-auto mb-6">
-          <Sparkles className="w-6 h-6 text-background" />
+        <div className="w-12 h-12 flex items-center justify-center mx-auto mb-6">
+          <ZigmaLogo size="lg" />
         </div>
         
         <h1 className="text-2xl font-medium text-foreground mb-3">
