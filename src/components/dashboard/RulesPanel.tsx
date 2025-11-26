@@ -11,6 +11,7 @@ interface RulesPanelProps {
   projectName: string;
   rules: ProjectRule[];
   isCreatingRule: boolean;
+  isEditingRule?: boolean;
   newRuleText: string;
   onClose: () => void;
   onStartCreating: () => void;
@@ -30,6 +31,7 @@ export function RulesPanel({
   projectName,
   rules,
   isCreatingRule,
+  isEditingRule = false,
   newRuleText,
   onClose,
   onStartCreating,
@@ -101,7 +103,7 @@ export function RulesPanel({
                   className="bg-muted/20 rounded-lg p-4 border border-border"
                 >
                   <p className="text-sm font-medium text-foreground mb-3">
-                    Create New Rule
+                    {isEditingRule ? 'Edit Rule' : 'Create New Rule'}
                   </p>
                   <Textarea
                     value={newRuleText}
@@ -125,7 +127,7 @@ export function RulesPanel({
                       className="flex-1 bg-primary hover:bg-primary/90"
                       disabled={!newRuleText.trim()}
                     >
-                      Create Rule
+                      {isEditingRule ? 'Save Changes' : 'Create Rule'}
                     </Button>
                   </div>
                 </motion.div>

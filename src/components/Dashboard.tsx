@@ -59,6 +59,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
   const [showRulesPanel, setShowRulesPanel] = useState(false);
   const [newRuleText, setNewRuleText] = useState('');
   const [isCreatingStandaloneRule, setIsCreatingStandaloneRule] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
 
   const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
   const [issueCreatingRule, setIssueCreatingRule] = useState<string | null>(null);
@@ -313,22 +314,34 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
   const createStandaloneRule = useCallback(() => {
     if (!newRuleText.trim()) return;
 
-    const newRule: ProjectRule = {
-      id: `rule-${Date.now()}`,
-      createdAt: new Date(),
-      naturalLanguage: newRuleText,
-      category: RULE_CATEGORIES.DATA_VALIDATION,
-      scope: RULE_SCOPES.FUTURE_ONLY,
-      isActive: true,
-      appliedToRecords: 0
-    };
+    if (editingRuleId) {
+      // Update existing rule
+      setProjectRules(prev => prev.map(rule =>
+        rule.id === editingRuleId
+          ? { ...rule, naturalLanguage: newRuleText }
+          : rule
+      ));
+      showSystemBanner(`✨ Rule updated: ${newRuleText}`);
+      setEditingRuleId(null);
+    } else {
+      // Create new rule
+      const newRule: ProjectRule = {
+        id: `rule-${Date.now()}`,
+        createdAt: new Date(),
+        naturalLanguage: newRuleText,
+        category: RULE_CATEGORIES.DATA_VALIDATION,
+        scope: RULE_SCOPES.FUTURE_ONLY,
+        isActive: true,
+        appliedToRecords: 0
+      };
 
-    setProjectRules(prev => [newRule, ...prev]);
+      setProjectRules(prev => [newRule, ...prev]);
+      showSystemBanner(`✨ Rule created: ${newRuleText}`);
+    }
+
     setNewRuleText('');
     setIsCreatingStandaloneRule(false);
-
-    showSystemBanner(`✨ Rule created: ${newRuleText}`);
-  }, [newRuleText, showSystemBanner]);
+  }, [newRuleText, showSystemBanner, editingRuleId]);
 
   const deleteRule = useCallback((ruleId: string) => {
     const rule = projectRules.find(r => r.id === ruleId);
@@ -375,8 +388,8 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     const rule = projectRules.find(r => r.id === ruleId);
     if (rule) {
       setNewRuleText(rule.naturalLanguage);
+      setEditingRuleId(ruleId);
       setIsCreatingStandaloneRule(true);
-      // TODO: Implement proper edit flow
     }
   }, [projectRules]);
 
@@ -462,6 +475,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     setShowRulesPanel(false);
     setIsCreatingStandaloneRule(false);
     setNewRuleText('');
+    setEditingRuleId(null);
   }, []);
 
   return (
@@ -523,6 +537,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         projectName={project.name}
         rules={projectRules}
         isCreatingRule={isCreatingStandaloneRule}
+        isEditingRule={!!editingRuleId}
         newRuleText={newRuleText}
         onClose={handleCloseRulesPanel}
         onStartCreating={() => {
@@ -532,6 +547,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         onCancelCreating={() => {
           setIsCreatingStandaloneRule(false);
           setNewRuleText('');
+          setEditingRuleId(null);
         }}
         onCreateRule={createStandaloneRule}
         onDeleteRule={deleteRule}

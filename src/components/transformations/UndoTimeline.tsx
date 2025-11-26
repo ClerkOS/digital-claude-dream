@@ -20,7 +20,7 @@ export function UndoTimeline({ actions, onUndo, isOpen, onClose }: UndoTimelineP
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: "spring", damping: 30, stiffness: 300 }}
-      className="fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-2xl z-40"
+      className="fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-2xl z-50"
     >
       <div className="h-full flex flex-col">
         {/* Header */}

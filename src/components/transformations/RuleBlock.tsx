@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { GripVertical, Edit2, Trash2, Play, MoreVertical } from 'lucide-react';
+import { GripVertical, Edit2, Trash2, Play, MoreVertical, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -89,6 +89,7 @@ export function RuleBlock({
                     Run
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onToggleActive(rule.id)}>
+                    <Power className="h-4 w-4 mr-2" />
                     {rule.isActive ? 'Deactivate' : 'Activate'}
                   </DropdownMenuItem>
                   <DropdownMenuItem
