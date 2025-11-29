@@ -224,7 +224,20 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     }
   }, [dataIssues]);
 
-  const { showPreview, hidePreview, currentPreview, addAction, actions, timelineOpen, setTimelineOpen } = useTransformationStore();
+  const { 
+    showPreview, 
+    hidePreview, 
+    currentPreview, 
+    addAction, 
+    actions, 
+    timelineOpen, 
+    setTimelineOpen,
+    pendingRule,
+    setPendingRule,
+    pendingRuleRun,
+    setPendingRuleRun,
+    clearPendingState,
+  } = useTransformationStore();
 
   const createRule = useCallback(async (issueId: string) => {
     if (!newRuleText.trim()) return;
@@ -244,11 +257,11 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         showPreview(preview);
         
         // Store the rule data for when preview is approved
-        (window as any).pendingRule = {
+        setPendingRule({
           issueId,
           ruleText: newRuleText,
           issue,
-        };
+        });
         return;
       } catch (error) {
         console.error('Failed to generate preview:', error);
@@ -258,7 +271,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
 
     // If no preview needed or preview failed, create rule directly
     await applyRuleCreation(issueId, newRuleText, issue);
-  }, [newRuleText, dataIssues, project.workbookId, showPreview]);
+  }, [newRuleText, dataIssues, project.workbookId, showPreview, setPendingRule]);
 
   const applyRuleCreation = useCallback(async (issueId: string, ruleText: string, issue: DataIssue) => {
     const newRule: ProjectRule = {
@@ -378,11 +391,11 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         'Sheet1'
       );
       showPreview(preview);
-      (window as any).pendingRuleRun = ruleId;
+      setPendingRuleRun(ruleId);
     } catch (error) {
       console.error('Failed to generate preview:', error);
     }
-  }, [projectRules, project.workbookId, showPreview]);
+  }, [projectRules, project.workbookId, showPreview, setPendingRuleRun]);
 
   const handleEditRule = useCallback((ruleId: string) => {
     const rule = projectRules.find(r => r.id === ruleId);
@@ -402,12 +415,9 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
   const handleApprovePreview = useCallback(async () => {
     if (!currentPreview) return;
 
-    const pendingRule = (window as any).pendingRule;
-    const pendingRuleRun = (window as any).pendingRuleRun;
-
     if (pendingRule) {
       await applyRuleCreation(pendingRule.issueId, pendingRule.ruleText, pendingRule.issue);
-      delete (window as any).pendingRule;
+      setPendingRule(null);
     } else if (pendingRuleRun) {
       // Apply the rule run
       const rule = projectRules.find(r => r.id === pendingRuleRun);
@@ -432,17 +442,16 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
           r.id === rule.id ? { ...r, appliedToRecords: r.appliedToRecords + currentPreview.affectedRows } : r
         ));
       }
-      delete (window as any).pendingRuleRun;
+      setPendingRuleRun(null);
     }
 
     hidePreview();
-  }, [currentPreview, projectRules, applyRuleCreation, addAction, hidePreview]);
+  }, [currentPreview, projectRules, applyRuleCreation, addAction, hidePreview, pendingRule, pendingRuleRun, setPendingRule, setPendingRuleRun]);
 
   const handleRejectPreview = useCallback(() => {
-    delete (window as any).pendingRule;
-    delete (window as any).pendingRuleRun;
+    clearPendingState();
     hidePreview();
-  }, [hidePreview]);
+  }, [hidePreview, clearPendingState]);
 
   const handleEditPreview = useCallback(() => {
     // TODO: Open rule editor

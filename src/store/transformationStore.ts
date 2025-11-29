@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import type { TransformationAction, TransformationPreview, CellChange } from '@/types/transformations';
+import type { DataIssue } from '@/types/dashboard';
+
+interface PendingRule {
+  issueId: string;
+  ruleText: string;
+  issue: DataIssue;
+}
 
 interface TransformationState {
   // Preview state
@@ -16,6 +23,13 @@ interface TransformationState {
   // Undo timeline UI
   timelineOpen: boolean;
   setTimelineOpen: (open: boolean) => void;
+
+  // Pending rule state (replaces window object usage)
+  pendingRule: PendingRule | null;
+  setPendingRule: (rule: PendingRule | null) => void;
+  pendingRuleRun: string | null;
+  setPendingRuleRun: (ruleId: string | null) => void;
+  clearPendingState: () => void;
 }
 
 export const useTransformationStore = create<TransformationState>((set, get) => ({
@@ -57,6 +71,13 @@ export const useTransformationStore = create<TransformationState>((set, get) => 
   // Timeline UI
   timelineOpen: false,
   setTimelineOpen: (open) => set({ timelineOpen: open }),
+
+  // Pending rule state
+  pendingRule: null,
+  setPendingRule: (rule) => set({ pendingRule: rule }),
+  pendingRuleRun: null,
+  setPendingRuleRun: (ruleId) => set({ pendingRuleRun: ruleId }),
+  clearPendingState: () => set({ pendingRule: null, pendingRuleRun: null }),
 }));
 
 // Helper function to generate preview from rule
