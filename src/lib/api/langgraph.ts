@@ -1,30 +1,38 @@
-export interface SuccessResponse<T> {
-  message: string;
-  data: T;
-  success: boolean;
+import { API_ROOT, fetchWithRetry } from './config';
+import type { ApiResponse } from '../../types/api';
+
+export interface AgentExecutionResponse {
+  agent_goal: string;
+  execution_status: 'success' | 'failed';
+  steps: Array<{
+    step_index: number;
+    op: string;
+    status: 'success' | 'failed';
+    version?: number;
+    diff?: any;
+    error?: string;
+  }>;
+  final_version: number;
+  schema: {
+    columns: string[];
+    types?: Record<string, string>;
+    row_count?: number;
+  };
 }
 
-const BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8081/api/v1/langgraph';
-
-async function handleJson<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Request failed ${res.status}: ${text}`);
-  }
-  return res.json();
-}
-
+/**
+ * Execute an agent request on a session
+ * The agent processes the natural language request and executes transformations
+ */
 export async function executeAgent(
-  workbookId: string,
-  userRequest: string,
-  sheetName: string = "Sheet1"
-): Promise<any> {
-  const API_ROOT = BASE.replace(/\/langgraph$/, '');
-  const res = await fetch(`${API_ROOT}/agents/execute/${encodeURIComponent(workbookId)}`, {
+  sessionId: string,
+  userRequest: string
+): Promise<AgentExecutionResponse> {
+  const url = `${API_ROOT}/execute/agent/${encodeURIComponent(sessionId)}`;
+  const response = await fetchWithRetry<AgentExecutionResponse>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_request: userRequest, sheet_name: sheetName }),
+    body: JSON.stringify({ request: userRequest }),
   });
-  const json = await handleJson<SuccessResponse<any>>(res);
-  return json.data;
+  return response;
 }
