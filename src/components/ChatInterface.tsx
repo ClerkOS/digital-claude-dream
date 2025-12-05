@@ -249,36 +249,46 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
           updateProject(projectWithWorkbook);
         }
 
-        const sheetName = "Sheet1";
-
+        // Execute agent with session ID (workbookId is actually session_id from backend)
         const result = await (await import('@/lib/api/langgraph')).executeAgent(
           workbookIdForConvo,
-          content,
-          sheetName
+          content
         );
 
-        if (result && result.plan && result.execution_result) {
-          const plan = result.plan;
+        // Handle new agent response format
+        if (result && result.execution_status === 'success') {
+          responseContent = `✅ Successfully executed: ${result.agent_goal}\n\n`;
 
-          responseContent = `✅ Successfully executed: ${plan.goal}\n\n`;
-
-          if (plan.steps && plan.steps.length > 0) {
-            plan.steps.forEach((step, index) => {
-              responseContent += `${index + 1}. ${step.description}\n`;
+          if (result.steps && result.steps.length > 0) {
+            responseContent += '**Steps performed:**\n';
+            result.steps.forEach((step, index) => {
+              const status = step.status === 'success' ? '✓' : '✗';
+              responseContent += `${index + 1}. ${status} ${step.op}\n`;
             });
           }
 
-          responseContent += `\n📊 **Click to view** your updated spreadsheet!`;
+          if (result.schema) {
+            responseContent += `\n📊 **Updated data:** ${result.schema.row_count} rows`;
+          }
 
+          responseContent += `\n\n💡 View your updated data in the spreadsheet!`;
+
+          // Refresh spreadsheet to show changes
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('spreadsheet-refresh', {
               detail: { workbookId: workbookIdForConvo }
             }));
           }, 1000);
-        } else if (result && result.plan && result.plan.goal) {
-          responseContent = `I understand you want to: ${result.plan.goal}. ${generateResponse(content)}`;
+        } else if (result && result.execution_status === 'failed') {
+          responseContent = `❌ Execution failed: ${result.agent_goal}\n\n`;
+          if (result.steps && result.steps.length > 0) {
+            const failedStep = result.steps.find(s => s.status === 'failed');
+            if (failedStep && failedStep.error) {
+              responseContent += `Error: ${failedStep.error}`;
+            }
+          }
         } else {
-          responseContent = `❌ Agent execution failed. ${generateResponse(content)}`;
+          responseContent = `I understand you want to: ${content}. ${generateResponse(content)}`;
         }
       }
 

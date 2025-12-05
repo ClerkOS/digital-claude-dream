@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { EmptyState } from '@/components/EmptyState';
 import { Dashboard } from '@/components/Dashboard';
+import { SimpleRulesInterface } from '@/components/SimpleRulesInterface';
 import { ChatInterface } from '@/components/ChatInterface';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { UploadProcessing } from '@/components/UploadProcessing';
@@ -384,11 +385,8 @@ const Index = () => {
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="h-full"
             >
-              <Dashboard
-                project={activeProject}
-                onOpenSpreadsheet={handleOpenSpreadsheet}
-                onOpenChat={handleOpenChat}
-                onUploadFiles={handleUploadFiles}
+              <SimpleRulesInterface
+                sessionId={activeProject.workbookId!}
               />
             </motion.div>
           ) : (
