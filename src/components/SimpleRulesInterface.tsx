@@ -104,9 +104,9 @@ export function SimpleRulesInterface({ sessionId }: SimpleRulesInterfaceProps) {
   return (
     <>
       {/* Data Viewer Modal */}
-      {showDataViewer && sessionData && (
+      {showDataViewer && (
         <DataViewer
-          sessionData={sessionData}
+          sessionId={sessionId}
           onClose={() => setShowDataViewer(false)}
         />
       )}
