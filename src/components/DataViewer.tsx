@@ -2,8 +2,8 @@ import { motion } from 'framer-motion';
 import { X, Database, Table as TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { GetSessionResponse } from '@/lib/api/sessions';
 import { useEffect, useState } from 'react';
+import { fetchWithRetry } from '@/lib/api/errorHandler';
 
 interface DataViewerProps {
   sessionId: string;
@@ -27,12 +27,15 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8081/sessions/${sessionId}/data`);
-        if (!response.ok) throw new Error('Failed to fetch data');
-        const data = await response.json();
+        const apiRoot = import.meta.env.VITE_API_ROOT || 'http://localhost:8081';
+        const url = `${apiRoot}/sessions/${sessionId}/data`;
+        
+        // Use fetchWithRetry for proper error handling and CORS
+        const data = await fetchWithRetry<SessionData>(url);
         setSessionData(data);
       } catch (err: any) {
-        setError(err.message);
+        console.error('Data fetch error:', err);
+        setError(err.message || 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
