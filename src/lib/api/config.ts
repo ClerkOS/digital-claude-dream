@@ -3,9 +3,9 @@
  * Centralizes API base URLs and configuration for all API modules
  */
 
-// Backend API base URL (FastAPI runs on port 8081 by default)
+// Backend API base URL (FastAPI runs on port 8000 by default)
 // Can be overridden via VITE_API_ROOT environment variable
-export const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:8081';
+export const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:8000';
 export const API_BASE = import.meta.env.VITE_API_BASE || `${API_ROOT}/langgraph`;
 
 /**

@@ -27,7 +27,7 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const apiRoot = import.meta.env.VITE_API_ROOT || 'http://localhost:8081';
+        const apiRoot = import.meta.env.VITE_API_ROOT || 'http://localhost:8000';
         const url = `${apiRoot}/sessions/${sessionId}/data`;
         
         // Use fetchWithRetry for proper error handling and CORS
