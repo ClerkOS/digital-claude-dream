@@ -193,6 +193,23 @@ export interface WorkbookResponse {
 export interface ImportWorkbookResponse {
   workbook_id: string;
   sheets: string[];
+  auto_analysis?: {
+    issues_found: number;
+    issues: Array<{
+      type: string;
+      severity: string;
+      description: string;
+      [key: string]: any;
+    }>;
+    recommended_rules: Array<{
+      op: string;
+      params: any;
+      reason: string;
+      priority: number;
+    }>;
+    rules_applied: number;
+    applied_transformations: Array<any>;
+  };
 }
 
 // ============================================================================

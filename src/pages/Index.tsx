@@ -124,6 +124,20 @@ const Index = () => {
             
             try {
               importResult = await importWorkbook(file, existingWorkbookId);
+              
+              // Log auto-rules results
+              if (importResult.auto_analysis) {
+                const analysis = importResult.auto_analysis;
+                console.log(`[AUTO-RULES] ✅ Analysis complete:`, analysis);
+                console.log(`[AUTO-RULES] Found ${analysis.issues_found} issue(s)`);
+                console.log(`[AUTO-RULES] Applied ${analysis.rules_applied} automatic fix(es)`);
+                
+                // Show user-friendly message about what was fixed
+                if (analysis.rules_applied > 0) {
+                  const fixes = analysis.applied_transformations.map((t: any) => t.op).join(', ');
+                  console.log(`[AUTO-RULES] Auto-applied: ${fixes}`);
+                }
+              }
             } catch (apiError) {
               console.warn('API error, using fallback:', apiError);
               // If API fails, simulate with a reasonable sheet count based on file type

@@ -8,17 +8,31 @@ import { createSession, type SessionResponse } from './sessions';
  * 
  * @param file - The file to upload (CSV or Excel)
  * @param workbookId - Optional workbook ID (ignored, sessions don't use this - sessions are created fresh)
+ * @param autoApplyRules - Whether to automatically apply data quality rules
  * @returns ImportWorkbookResponse with session_id mapped to workbook_id
  */
-export async function importWorkbook(file: File, workbookId?: string): Promise<ImportWorkbookResponse> {
+export async function importWorkbook(
+  file: File, 
+  workbookId?: string,
+  autoApplyRules: boolean = true
+): Promise<ImportWorkbookResponse> {
   // Use sessions endpoint instead of workbook/import
-  const sessionResponse = await createSession(file);
+  const sessionResponse = await createSession(file, autoApplyRules);
+  
+  // Log auto-analysis results if available
+  if (sessionResponse.auto_analysis) {
+    console.log('[AUTO-RULES] Analysis:', sessionResponse.auto_analysis);
+    if (sessionResponse.auto_analysis.rules_applied > 0) {
+      console.log(`[AUTO-RULES] ✅ Applied ${sessionResponse.auto_analysis.rules_applied} automatic transformations`);
+    }
+  }
   
   // Map session response to ImportWorkbookResponse format for backward compatibility
   // Sessions work with single DataFrame, so we return a single "Sheet1" entry
   return {
     workbook_id: sessionResponse.session_id, // Map session_id to workbook_id
     sheets: ['Sheet1'], // Sessions have a single data sheet
+    auto_analysis: sessionResponse.auto_analysis, // Include auto-analysis data
   };
 }
 
