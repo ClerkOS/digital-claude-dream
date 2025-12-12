@@ -12,7 +12,7 @@ import type {
   TransformationHistoryResponse,
   TransformationActionResponse,
   ApiResponse,
-} from '../../types/api';
+} from '../../../types/api';
 
 /**
  * Preview a rule transformation before applying

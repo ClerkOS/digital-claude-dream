@@ -1,5 +1,5 @@
 import { API_ROOT, handleApiResponse, fetchWithRetry } from './config';
-import type { ApiResponse, SheetResponse, SheetsListResponse } from '../../types/api';
+import type { ApiResponse, SheetResponse, SheetsListResponse } from '../../../types/api';
 
 export async function listSheets(workbookId: string): Promise<string[]> {
   const url = `${API_ROOT}/sheet/list/${encodeURIComponent(workbookId)}`;

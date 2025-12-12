@@ -9,7 +9,7 @@ import type {
   IssueDetailsResponse,
   IssuesListResponse,
   ApiResponse,
-} from '../../types/api';
+} from '../../../types/api';
 
 /**
  * Get all issues for a workbook

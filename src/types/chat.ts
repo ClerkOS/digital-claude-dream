@@ -11,7 +11,7 @@ export interface Project {
   timestamp: string;
   preview: string;
   messages: Message[];
-  workbookId?: string;
+  sessionId?: string;
   files: {
     name: string;
     size: number;

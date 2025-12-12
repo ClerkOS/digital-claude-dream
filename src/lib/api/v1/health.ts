@@ -7,7 +7,7 @@ import { getApiUrl, handleApiResponse, fetchWithRetry } from './config';
 import type {
   HealthMetricsResponse,
   ApiResponse,
-} from '../../types/api';
+} from '../../../types/api';
 
 /**
  * Get data health metrics for a workbook

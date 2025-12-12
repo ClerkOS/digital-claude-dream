@@ -1,5 +1,5 @@
-import { API_ROOT, fetchWithRetry } from './config';
-import type { ApiResponse, CellResponse, BatchSetCellsResponse } from '../../types/api';
+import { API_ROOT, fetchWithRetry } from './config'
+import type { ApiResponse, CellResponse, BatchSetCellsResponse } from '../../../types/api';
 
 export async function getCell(workbookId: string, sheetName: string, address: string): Promise<CellResponse> {
   const url = `${API_ROOT}/cell/${encodeURIComponent(workbookId)}/${encodeURIComponent(sheetName)}/${encodeURIComponent(address)}`;

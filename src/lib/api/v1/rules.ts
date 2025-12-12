@@ -10,7 +10,7 @@ import type {
   RuleResponse,
   RulesListResponse,
   ApiResponse,
-} from '../../types/api';
+} from '../../../types/api';
 
 /**
  * Get all rules for a workbook

@@ -4,10 +4,13 @@ import { Send, RefreshCw, Check, X, Clock, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { getSession, executeAgent } from '@/lib/api';
-import type { AgentExecutionResponse } from '@/lib/api/langgraph';
-import type { GetSessionResponse } from '@/lib/api/sessions';
+// import { getSession, executeAgent } from '@/lib/api/v1';
+import { getSession } from '@/lib/api/v2/sessions';
+import type { AgentExecutionResponse } from '@/lib/api/v1/langgraph';
+// import type { GetSessionResponse } from '@/lib/api/v1/sessions';
+import type { SessionResponse } from '@/types/v2/session';
 import { DataViewer } from './DataViewer';
+import { processAgentRequest } from '@/lib/api/v2/agent';
 
 interface Rule {
   id: string;
@@ -28,18 +31,21 @@ export function SimpleRulesInterface({ sessionId }: SimpleRulesInterfaceProps) {
   const [ruleInput, setRuleInput] = useState('');
   const [rules, setRules] = useState<Rule[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [sessionData, setSessionData] = useState<GetSessionResponse | null>(null);
+  // const [sessionData, setSessionData] = useState<GetSessionResponse | null>(null);
+  const [sessionData, setSessionData] = useState<SessionResponse | null>(null);
   const [error, setError] = useState<string>('');
   const [showDataViewer, setShowDataViewer] = useState(false);
 
   // Load session and history on mount
   useEffect(() => {
+    // if (!sessionId) return; // guard against early mounts when files are uploaded
     loadSession();
   }, [sessionId]);
 
   const loadSession = async () => {
     try {
       const session = await getSession(sessionId);
+      console.log('Loaded session:', session);
       setSessionData(session);
       
       // Convert history to rules format
@@ -65,7 +71,8 @@ export function SimpleRulesInterface({ sessionId }: SimpleRulesInterfaceProps) {
     setError('');
 
     try {
-      const result: AgentExecutionResponse = await executeAgent(sessionId, ruleInput.trim());
+      const result = await processAgentRequest(sessionId, ruleInput.trim());
+      console.log('Agent execution result:', result);
       
       // Add to rules list
       const newRule: Rule = {

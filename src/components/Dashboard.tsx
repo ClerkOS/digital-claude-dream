@@ -1,23 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  FileSpreadsheet, 
-  DollarSign, 
-  CreditCard, 
+import {
+  FileSpreadsheet,
+  DollarSign,
+  CreditCard,
   Receipt,
   CheckCircle2,
   TriangleAlert,
 } from 'lucide-react';
 import { Project } from '@/types/chat';
-import { 
-  DataIssue, 
-  DataHealthMetrics, 
-  ProjectRule, 
-  SummaryCard 
+import {
+  DataIssue,
+  DataHealthMetrics,
+  ProjectRule,
+  SummaryCard
 } from '@/types/dashboard';
-import { 
-  DATA_HEALTH_DEFAULTS, 
-  HEALTH_IMPROVEMENT, 
+import {
+  DATA_HEALTH_DEFAULTS,
+  HEALTH_IMPROVEMENT,
   ANIMATION_DURATION,
   SYSTEM_BANNER_TIMEOUT,
   RULE_CREATION_DELAYS,
@@ -69,8 +69,8 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
   const [systemBannerVisible, setSystemBannerVisible] = useState(false);
   const [pulsedIssueId, setPulsedIssueId] = useState<string | null>(null);
 
-  const hasData = project.files.length > 0 || project.workbookId;
-  
+  const hasData = project.files.length > 0 || project.sessionId;
+
   // Generate summary cards
   const summaryCards: SummaryCard[] = hasData ? [
     {
@@ -162,8 +162,8 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
   const handleResolveIssue = useCallback((issueId: string) => {
     const issueToResolve = dataIssues.find(issue => issue.id === issueId);
     if (!issueToResolve) return;
-    
-    setDataIssues(prev => prev.map(issue => 
+
+    setDataIssues(prev => prev.map(issue =>
       issue.id === issueId ? { ...issue, isResolving: true } : issue
     ));
 
@@ -171,16 +171,16 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
       setDataIssues(prev => {
         const updatedIssues = prev.filter(issue => issue.id !== issueId);
         const newTotalIssues = updatedIssues.reduce((sum, issue) => sum + issue.count, 0);
-        
+
         setDataHealth(prevHealth => ({
           ...prevHealth,
           resolvedIssues: prevHealth.resolvedIssues + issueToResolve.count,
           issuesFound: newTotalIssues,
           cleanlinessPercentage: Math.min(100, prevHealth.cleanlinessPercentage + HEALTH_IMPROVEMENT.ON_RESOLVE)
         }));
-        
+
         setResolvedIssues(prev => [...prev, { ...issueToResolve, isResolved: true }]);
-        
+
         return updatedIssues;
       });
     }, ANIMATION_DURATION.FADE);
@@ -190,7 +190,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     const issueToResolve = dataIssues.find(i => i.id === issueId);
     if (!issueToResolve) return;
 
-    setDataIssues(prev => prev.map(issue => 
+    setDataIssues(prev => prev.map(issue =>
       issue.id === issueId ? { ...issue, isResolving: true } : issue
     ));
 
@@ -198,14 +198,14 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
       setDataIssues(prev => {
         const updatedIssues = prev.filter(issue => issue.id !== issueId);
         const newTotalIssues = updatedIssues.reduce((sum, issue) => sum + issue.count, 0);
-        
+
         setDataHealth(prevHealth => ({
           ...prevHealth,
           issuesFound: newTotalIssues,
           resolvedIssues: prevHealth.resolvedIssues + issueToResolve.count,
           cleanlinessPercentage: Math.min(100, prevHealth.cleanlinessPercentage + HEALTH_IMPROVEMENT.ON_RULE_RESOLVE)
         }));
-        
+
         return updatedIssues;
       });
 
@@ -224,13 +224,13 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     }
   }, [dataIssues]);
 
-  const { 
-    showPreview, 
-    hidePreview, 
-    currentPreview, 
-    addAction, 
-    actions, 
-    timelineOpen, 
+  const {
+    showPreview,
+    hidePreview,
+    currentPreview,
+    addAction,
+    actions,
+    timelineOpen,
     setTimelineOpen,
     pendingRule,
     setPendingRule,
@@ -246,16 +246,16 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     if (!issue) return;
 
     // Show preview before creating rule
-    if (project.workbookId) {
+    if (project.sessionId) {
       try {
         const preview = await generatePreview(
           `rule-${Date.now()}`,
           newRuleText,
-          project.workbookId,
+          project.sessionId,
           'Sheet1'
         );
         showPreview(preview);
-        
+
         // Store the rule data for when preview is approved
         setPendingRule({
           issueId,
@@ -271,7 +271,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
 
     // If no preview needed or preview failed, create rule directly
     await applyRuleCreation(issueId, newRuleText, issue);
-  }, [newRuleText, dataIssues, project.workbookId, showPreview, setPendingRule]);
+  }, [newRuleText, dataIssues, project.sessionId, showPreview, setPendingRule]);
 
   const applyRuleCreation = useCallback(async (issueId: string, ruleText: string, issue: DataIssue) => {
     const newRule: ProjectRule = {
@@ -380,14 +380,14 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
 
   const handleRunRule = useCallback(async (ruleId: string) => {
     const rule = projectRules.find(r => r.id === ruleId);
-    if (!rule || !project.workbookId) return;
+    if (!rule || !project.sessionId) return;
 
     // Show preview before running
     try {
       const preview = await generatePreview(
         ruleId,
         rule.naturalLanguage,
-        project.workbookId,
+        project.sessionId,
         'Sheet1'
       );
       showPreview(preview);
@@ -395,7 +395,7 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
     } catch (error) {
       console.error('Failed to generate preview:', error);
     }
-  }, [projectRules, project.workbookId, showPreview, setPendingRuleRun]);
+  }, [projectRules, project.sessionId, showPreview, setPendingRuleRun]);
 
   const handleEditRule = useCallback((ruleId: string) => {
     const rule = projectRules.find(r => r.id === ruleId);
@@ -564,12 +564,12 @@ export function Dashboard({ project, onOpenSpreadsheet, onOpenChat, onUploadFile
         onEditRule={handleEditRule}
         onRunRule={handleRunRule}
         onToggleActive={handleToggleActive}
-        workbookId={project.workbookId}
+        workbookId={project.sessionId}
       />
 
       <SpreadsheetSlideOver
         isOpen={showSpreadsheet}
-        workbookId={project.workbookId}
+        workbookId={project.sessionId}
         onClose={() => setShowSpreadsheet(false)}
       />
     </div>

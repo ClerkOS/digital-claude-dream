@@ -3,7 +3,7 @@
  * Provides consistent error handling, retry logic, and user-friendly error messages
  */
 
-import type { ApiError } from '../../types/api';
+import type { ApiError } from '../../../types/api';
 
 export interface RetryOptions {
   maxRetries?: number;

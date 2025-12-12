@@ -3,7 +3,7 @@ import { X, Database, Table as TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
-import { fetchWithRetry } from '@/lib/api/errorHandler';
+import { fetchWithRetry } from '@/lib/api/v1/errorHandler';
 
 interface DataViewerProps {
   sessionId: string;

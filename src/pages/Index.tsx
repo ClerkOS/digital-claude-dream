@@ -11,7 +11,10 @@ import { DetachedSheetsRenderer } from '@/components/SheetTabs';
 import { Project } from '@/types/chat';
 import { STORAGE_KEYS, UPLOAD_CONFIG } from '@/constants';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { importWorkbook } from '@/lib/api/workbook';
+import { importWorkbook } from '@/lib/api/v1/workbook';
+import { useUploadAndAnalyze } from '@/hooks/useUploadAndAnalyze';
+import { u } from 'tar';
+import { set } from 'date-fns';
 
 type AppState = 'empty' | 'dashboard' | 'chat' | 'uploading' | 'pipeline';
 
@@ -20,7 +23,8 @@ const Index = () => {
   const [projects, setProjects] = useLocalStorage<Project[]>(STORAGE_KEYS.PROJECTS, []);
   const [activeProjectId, setActiveProjectId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+  const { sessionId, suggestions, currentStep, uploadAndAnalyze } = useUploadAndAnalyze();
+
   // Upload processing state
   const [uploadState, setUploadState] = useState<{
     files: Array<{ file: File }>;
@@ -48,7 +52,16 @@ const Index = () => {
 
   const activeProject = projects.find(p => p.id === activeProjectId);
 
+  useEffect(() => {
+  if (appState === 'pipeline') {
+    setPipelineState({ currentStep });
+  }
+}, [currentStep, appState]);
+
   const handleFileUpload = async (files: any[]) => {
+    if (files.length === 0) return;
+
+    console.log('Starting file upload for files:', files);
     setUploadState({
       files,
       progress: 0,
@@ -57,260 +70,68 @@ const Index = () => {
     });
     setAppState('uploading');
 
+    const file = files[0]?.file;
     const uploadDuration = UPLOAD_CONFIG.DURATION;
     const progressInterval = UPLOAD_CONFIG.PROGRESS_INTERVAL;
     let currentProgress = 0;
 
-    const uploadTimer = setInterval(() => {
+    const uploadTimer = setInterval(async() => {
       currentProgress += (progressInterval / uploadDuration) * 100;
+
       if (currentProgress >= 100) {
         currentProgress = 100;
         clearInterval(uploadTimer);
-        
-        setUploadState(prev => prev ? { 
-          ...prev, 
-          progress: 100, 
+        setUploadState(prev => prev ? {
+          ...prev,
+          progress: 100,
           stage: 'complete'
         } : null);
-        
-        // After upload completes, start pipeline processing
-        setTimeout(async () => {
-          const file = files[0]?.file;
-          if (!file) {
-            console.error('No file found in upload');
-            // Still create project with files metadata
-            const fileMetadata = files.map(f => ({
-              name: f.file?.name || 'Unknown',
-              size: f.file?.size || 0,
-              type: f.file?.type || '',
+
+        // Show pipeline ui
+        setUploadState(null);
+        setPipelineState({ currentStep: 'creating' });
+        setAppState('pipeline');
+
+        // Start upload and analysis
+        console.log('Uploading and analyzing file');
+        (async () => {
+          try{
+            const { sessionId: newSessionId, suggestions } = await uploadAndAnalyze(file);
+            console.log('Upload and analysis complete. Session ID:', newSessionId, 'Suggestions:', suggestions);
+
+            const fileMetadata = {
+              name: file.name,
+              size: file.size,
+              type: file.type,
               uploadedAt: new Date().toISOString(),
-            }));
-            
-            if (!activeProjectId) {
-              const newProject: Project = {
-                id: `project-${Date.now()}`,
-                name: 'New Project',
-                timestamp: 'Just now',
-                preview: 'New project created',
-                messages: [],
-                files: fileMetadata,
-                lastActivity: 'Just now',
-              };
-              setProjects(prev => [newProject, ...prev]);
-              setActiveProjectId(newProject.id);
+            };
+
+            // Create new project with sessionId
+            const newProject: Project = {
+              id: `project-${Date.now()}`,
+              name: file.name,
+              timestamp: new Date().toLocaleString(),
+              preview: `Uploaded ${file.name}`,
+              messages: [],
+              files: [fileMetadata],
+              sessionId: newSessionId,
+              lastActivity: 'Just now',
             }
-            setUploadState(null);
+
+            setProjects(prev => [newProject, ...prev]);
+            setActiveProjectId(newProject.id);
+
+            // Update pipeline state to show analysis results
+            setPipelineState({currentStep: 'complete'});
             setAppState('dashboard');
-            return;
-          }
 
-          setUploadState(null);
-          setAppState('pipeline');
-          
-          // Initialize pipeline state
-          setPipelineState({
-            currentStep: 'understanding',
-            sheetsCount: undefined,
-            patternsCount: undefined,
-            rulesCount: undefined
-          });
-          
-          console.log('Starting pipeline processing for file:', file.name);
-
-          try {
-            // Step 1: Understanding sheets - Import workbook and get sheet count
-            const existingWorkbookId = activeProject?.workbookId;
-            let importResult;
-            
-            try {
-              importResult = await importWorkbook(file, existingWorkbookId);
-              
-              // Log auto-rules results
-              if (importResult.auto_analysis) {
-                const analysis = importResult.auto_analysis;
-                console.log(`[AUTO-RULES] ✅ Analysis complete:`, analysis);
-                console.log(`[AUTO-RULES] Found ${analysis.issues_found} issue(s)`);
-                console.log(`[AUTO-RULES] Applied ${analysis.rules_applied} automatic fix(es)`);
-                
-                // Show user-friendly message about what was fixed
-                if (analysis.rules_applied > 0) {
-                  const fixes = analysis.applied_transformations.map((t: any) => t.op).join(', ');
-                  console.log(`[AUTO-RULES] Auto-applied: ${fixes}`);
-                }
-              }
-            } catch (apiError) {
-              console.warn('API error, using fallback:', apiError);
-              // If API fails, simulate with a reasonable sheet count based on file type
-              // For Excel files, we'll assume 1-3 sheets
-              const estimatedSheets = file.name.toLowerCase().endsWith('.csv') ? 1 : (1 + Math.floor(Math.random() * 3));
-              const sheetNames = Array.from({ length: estimatedSheets }, (_, i) => `Sheet${i + 1}`);
-              importResult = {
-                workbook_id: `workbook-${Date.now()}`,
-                sheets: sheetNames
-              };
-            }
-            
-            console.log('Sheets detected:', importResult.sheets.length);
-            setPipelineState(prev => prev ? {
-              ...prev,
-              currentStep: 'detecting',
-              sheetsCount: importResult.sheets.length,
-              workbookId: importResult.workbook_id
-            } : null);
-
-            // Step 2: Detect patterns - Use REAL agent analysis
-            try {
-              const { executeAgent } = await import('@/lib/api/langgraph');
-              const { getSession } = await import('@/lib/api/sessions');
-              
-              // Get session data first to understand the schema
-              const sessionData = await getSession(importResult.workbook_id);
-              
-              // Ask agent to analyze the data and detect patterns
-              const analysisPrompt = `Analyze this dataset and identify data quality patterns or issues. 
-Dataset has ${sessionData.schema.row_count} rows and ${sessionData.schema.columns.length} columns: ${sessionData.schema.columns.map(c => c.name).join(', ')}.
-List specific patterns you detect (e.g., missing values, duplicates, data type issues, naming inconsistencies).`;
-              
-              const analysisResult = await executeAgent(
-                importResult.workbook_id,
-                analysisPrompt
-              );
-              
-              // Count patterns from agent's analysis
-              const patternsCount = analysisResult.steps?.length || sessionData.schema.columns.length;
-              
-              console.log('Patterns detected:', patternsCount, '(via agent analysis)');
-              setPipelineState(prev => prev ? {
-                ...prev,
-                currentStep: 'applying',
-                patternsCount: patternsCount
-              } : null);
-
-            } catch (analysisError) {
-              console.warn('Pattern detection failed, using schema-based count:', analysisError);
-              // Fallback: use column count as pattern count
-              const patternsCount = importResult.sheets.length * 3;
-              console.log('Patterns detected:', patternsCount, '(fallback)');
-              setPipelineState(prev => prev ? {
-                ...prev,
-                currentStep: 'applying',
-                patternsCount: patternsCount
-              } : null);
-            }
-
-            // Step 3: Suggest rules - Use REAL agent suggestions
-            try {
-              const { executeAgent } = await import('@/lib/api/langgraph');
-              
-              // Ask agent to suggest transformation rules
-              const rulesPrompt = `Based on this dataset, suggest 3-5 practical data transformation rules to improve data quality. Keep suggestions brief and actionable.`;
-              
-              const rulesResult = await executeAgent(
-                importResult.workbook_id,
-                rulesPrompt
-              );
-              
-              // Count suggested rules from agent's response
-              const rulesCount = rulesResult.steps?.length || 3;
-              
-              console.log('Rules applied:', rulesCount, '(via agent suggestions)');
-              setPipelineState(prev => prev ? {
-                ...prev,
-                currentStep: 'complete',
-                rulesCount: rulesCount
-              } : null);
-
-            } catch (rulesError) {
-              console.warn('Rule suggestions failed, using estimate:', rulesError);
-              // Fallback: estimate rule count
-              const rulesCount = 3;
-              console.log('Rules applied:', rulesCount, '(fallback)');
-              setPipelineState(prev => prev ? {
-                ...prev,
-                currentStep: 'complete',
-                rulesCount: rulesCount
-              } : null);
-            }
-
-            // After pipeline completes, transition to dashboard
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Update or create project
-            const fileMetadata = files.map(file => ({
-              name: file.file.name,
-              size: file.file.size,
-              type: file.file.type,
-              uploadedAt: new Date().toISOString(),
-            }));
-
-            if (!activeProjectId) {
-              const newProject: Project = {
-                id: `project-${Date.now()}`,
-                name: 'New Project',
-                timestamp: 'Just now',
-                preview: 'New project created',
-                messages: [],
-                files: fileMetadata,
-                workbookId: importResult.workbook_id,
-                lastActivity: 'Just now',
-              };
-
-              setProjects(prev => [newProject, ...prev]);
-              setActiveProjectId(newProject.id);
-            } else {
-              setProjects(prev => prev.map(p => 
-                p.id === activeProjectId 
-                  ? {
-                      ...p,
-                      files: [...p.files, ...fileMetadata],
-                      workbookId: importResult.workbook_id,
-                      lastActivity: 'Just now'
-                    }
-                  : p
-              ));
-            }
-
-            setPipelineState(null);
-            setAppState('dashboard');
           } catch (error) {
-            console.error('Error processing file:', error);
-            // On error, still create project but without workbookId
-            const fileMetadata = files.map(file => ({
-              name: file.file.name,
-              size: file.file.size,
-              type: file.file.type,
-              uploadedAt: new Date().toISOString(),
-            }));
-
-            if (!activeProjectId) {
-              const newProject: Project = {
-                id: `project-${Date.now()}`,
-                name: 'New Project',
-                timestamp: 'Just now',
-                preview: 'New project created',
-                messages: [],
-                files: fileMetadata,
-                lastActivity: 'Just now',
-              };
-
-              setProjects(prev => [newProject, ...prev]);
-              setActiveProjectId(newProject.id);
-            } else {
-              setProjects(prev => prev.map(p => 
-                p.id === activeProjectId 
-                  ? {
-                      ...p,
-                      files: [...p.files, ...fileMetadata],
-                      lastActivity: 'Just now'
-                    }
-                  : p
-              ));
-            }
-            
+            console.error('Upload and analysis error:', error);
             setPipelineState(null);
-            setAppState('dashboard');
+            setAppState('empty');
           }
-        }, 500);
+        })();
+
       } else {
         setUploadState(prev => prev ? { ...prev, progress: currentProgress } : null);
       }
@@ -343,8 +164,8 @@ List specific patterns you detect (e.g., missing values, duplicates, data type i
   };
 
   const handleRenameProject = (projectId: string, newName: string) => {
-    setProjects(prev => prev.map(p => 
-      p.id === projectId 
+    setProjects(prev => prev.map(p =>
+      p.id === projectId
         ? { ...p, name: newName, lastActivity: 'Just now' }
         : p
     ));
@@ -352,7 +173,7 @@ List specific patterns you detect (e.g., missing values, duplicates, data type i
 
   const handleDeleteProject = (projectId: string) => {
     setProjects(prev => prev.filter(p => p.id !== projectId));
-    
+
     // If we deleted the active project, select another one or go to empty state
     if (activeProjectId === projectId) {
       const remainingProjects = projects.filter(p => p.id !== projectId);
@@ -440,7 +261,7 @@ List specific patterns you detect (e.g., missing values, duplicates, data type i
         )}
 
         {((appState === 'dashboard' && activeProject) || (activeProject && appState !== 'chat')) && (
-          activeProject.files.length > 0 || activeProject.workbookId ? (
+          activeProject.files.length > 0 || activeProject.sessionId ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -448,7 +269,7 @@ List specific patterns you detect (e.g., missing values, duplicates, data type i
               className="h-full"
             >
               <SimpleRulesInterface
-                sessionId={activeProject.workbookId!}
+                sessionId={activeProject.sessionId!}
               />
             </motion.div>
           ) : (
@@ -464,7 +285,7 @@ List specific patterns you detect (e.g., missing values, duplicates, data type i
             project={activeProject}
             onBackToDashboard={handleBackToDashboard}
             onUpdateProject={(updatedProject) => {
-              setProjects(prev => prev.map(p => 
+              setProjects(prev => prev.map(p =>
                 p.id === updatedProject.id ? updatedProject : p
               ));
             }}

@@ -6,7 +6,7 @@
 // Backend API base URL (FastAPI runs on port 8000 by default)
 // Can be overridden via VITE_API_ROOT environment variable
 export const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:8000';
-export const API_BASE = import.meta.env.VITE_API_BASE || `${API_ROOT}/langgraph`;
+export const API_BASE = import.meta.env.VITE_API_BASE || `${API_ROOT}`;
 
 /**
  * Get the full API URL for a given endpoint

@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 
-export type PipelineStep = 'understanding' | 'detecting' | 'applying' | 'complete';
+// export type PipelineStep = 'creating_session'|'understanding' | 'analyzing' | 'suggesting' | 'complete';
+export type PipelineStep = 'creating' | 'analyzing' | 'suggesting' | 'complete';
 
 interface PipelineStepData {
   label: string;
@@ -25,23 +26,18 @@ export function DataPipelineProgress({
 }: DataPipelineProgressProps) {
   const steps: PipelineStepData[] = [
     {
-      label: 'Understanding sheets',
-      status: currentStep === 'understanding' ? 'active' : 
-              currentStep === 'detecting' || currentStep === 'applying' || currentStep === 'complete' ? 'complete' : 'pending',
-      count: sheetsCount,
-      countLabel: sheetsCount !== undefined ? `${sheetsCount} sheet${sheetsCount !== 1 ? 's' : ''} detected` : undefined
+      label: 'Creating session',
+      status: currentStep === 'creating' ? 'active' : (currentStep === 'analyzing' || currentStep === 'suggesting') ? 'complete' : 'pending'
     },
     {
-      label: 'Detect patterns',
-      status: currentStep === 'detecting' ? 'active' : 
-              currentStep === 'applying' || currentStep === 'complete' ? 'complete' : 'pending',
+      label: 'Analyzing data',
+      status: currentStep === 'analyzing' ? 'active' : currentStep === 'suggesting' ? 'complete' : 'pending',
       count: patternsCount,
       countLabel: patternsCount !== undefined ? `${patternsCount} pattern${patternsCount !== 1 ? 's' : ''} detected` : undefined
     },
     {
-      label: 'Applying rules',
-      status: currentStep === 'applying' ? 'active' : 
-              currentStep === 'complete' ? 'complete' : 'pending',
+      label: 'Generating suggestions',
+      status: currentStep === 'suggesting' ? 'active' : 'pending',
       count: rulesCount,
       countLabel: rulesCount !== undefined ? `${rulesCount} rule${rulesCount !== 1 ? 's' : ''} applied` : undefined
     }

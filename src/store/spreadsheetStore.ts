@@ -402,7 +402,7 @@ export const useSpreadsheetStore = create<SpreadsheetState>()((set, get) => ({
       refreshWorkbook: async (workbookId) => {
         try {
           // Import the workbook API function
-          const { getWorkbook } = await import('@/lib/api/workbook');
+          const { getWorkbook } = await import('@/lib/api/v1/workbook');
           const workbookData = await getWorkbook(workbookId);
           
           

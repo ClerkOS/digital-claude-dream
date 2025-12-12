@@ -58,13 +58,13 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
   // Load workbook data when project has a workbookId
   useEffect(() => {
     const loadWorkbookData = async () => {
-      if (project.workbookId && !workbook) {
-        await refreshWorkbook(project.workbookId);
+      if (project.sessionId && !workbook) {
+        await refreshWorkbook(project.sessionId);
       }
     };
 
     loadWorkbookData();
-  }, [project.workbookId, workbook, refreshWorkbook]);
+  }, [project.sessionId, workbook, refreshWorkbook]);
 
   // Listen for spreadsheet refresh events
   useEffect(() => {
@@ -105,18 +105,18 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
 
   const handleViewFile = (file: { name: string; content: string; type: 'text' | 'code' | 'image' | 'markdown'; language?: string; }) => {
     setCurrentFile(file);
-    
+
     // Determine if this is an Excel/CSV file
-    const isExcelFile = file.language === 'csv' || 
-                       file.language === 'excel' || 
-                       (file.content.includes(',') && file.content.split('\n').length > 1 && 
-                        file.content.split('\n')[0].split(',').length > 1);
-    
+    const isExcelFile = file.language === 'csv' ||
+      file.language === 'excel' ||
+      (file.content.includes(',') && file.content.split('\n').length > 1 &&
+        file.content.split('\n')[0].split(',').length > 1);
+
     if (isExcelFile) {
       setExcelViewerOpen(true);
       setSidebarOpen(false); // Close left sidebar when opening Excel viewer
     } else {
-    setFileViewerOpen(true);
+      setFileViewerOpen(true);
     }
   };
 
@@ -134,7 +134,7 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
       lastActivity: 'Just now',
       messages: []
     };
-    
+
     if (onUpdateProject) {
       onUpdateProject(newProject);
     }
@@ -160,7 +160,7 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
 
         try {
           // Import the file to the backend
-          const importResult = await (await import('@/lib/api/workbook')).importWorkbook(file, project.workbookId || '');
+          const importResult = await (await import('@/lib/api/v1/workbook')).importWorkbook(file, project.sessionId || '');
 
           // Create a file message with import success
           const fileMessage: Message = {
@@ -225,22 +225,22 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
 
     try {
       const isSpreadsheetOperation = content.toLowerCase().includes('create') ||
-                                   content.toLowerCase().includes('add') ||
-                                   content.toLowerCase().includes('sheet') ||
-                                   content.toLowerCase().includes('table') ||
-                                   content.toLowerCase().includes('data') ||
-                                   content.toLowerCase().includes('ledger') ||
-                                   content.toLowerCase().includes('analyze');
+        content.toLowerCase().includes('add') ||
+        content.toLowerCase().includes('sheet') ||
+        content.toLowerCase().includes('table') ||
+        content.toLowerCase().includes('data') ||
+        content.toLowerCase().includes('ledger') ||
+        content.toLowerCase().includes('analyze');
 
       let responseContent = generateResponse(content);
-      let workbookIdForConvo = project.workbookId;
+      let workbookIdForConvo = project.sessionId;
 
       if (isSpreadsheetOperation) {
         // Use the project's workbookId, or create one if needed
         if (!workbookIdForConvo) {
-          const created = await (await import('@/lib/api/workbook')).createWorkbook();
+          const created = await (await import('@/lib/api/v1/workbook')).createWorkbook();
           workbookIdForConvo = created.workbook_id;
-          
+
           // Update project with new workbookId
           const projectWithWorkbook = {
             ...projectWithUserMessage,
@@ -250,7 +250,7 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
         }
 
         // Execute agent with session ID (workbookId is actually session_id from backend)
-        const result = await (await import('@/lib/api/langgraph')).executeAgent(
+        const result = await (await import('@/lib/api/v1/langgraph')).executeAgent(
           workbookIdForConvo,
           content
         );
@@ -315,7 +315,7 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
         role: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      
+
       // Add error message to project
       const projectWithError = {
         ...projectWithUserMessage,
@@ -338,20 +338,20 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
         onNewProject={handleNewConversation}
         projects={[]}
         activeProjectId={project.id}
-        onSelectProject={() => {}}
-        onRenameProject={() => {}}
-        onDeleteProject={() => {}}
+        onSelectProject={() => { }}
+        onRenameProject={() => { }}
+        onDeleteProject={() => { }}
       />
 
       {/* Main Chat Area */}
-      <motion.div 
+      <motion.div
         className="flex-1 flex flex-col"
         animate={{
           width: excelViewerOpen ? "50%" : "100%"
         }}
-        transition={{ 
-          type: "spring", 
-          damping: 30, 
+        transition={{
+          type: "spring",
+          damping: 30,
           stiffness: 300,
           duration: 0.4
         }}
@@ -391,15 +391,15 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">
-          <motion.div 
+          <motion.div
             className="max-w-4xl mx-auto"
             animate={{
               paddingLeft: excelViewerOpen ? '2rem' : '1.5rem',
               paddingRight: excelViewerOpen ? '2rem' : '1.5rem'
             }}
-            transition={{ 
-              type: "spring", 
-              damping: 30, 
+            transition={{
+              type: "spring",
+              damping: 30,
               stiffness: 300,
               duration: 0.4
             }}
@@ -428,7 +428,7 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
                     onViewSpreadsheet={handleViewSpreadsheet}
                   />
                 ))}
-                
+
                 {/* Typing indicator */}
                 {isTyping && (
                   <div className="flex gap-3">
@@ -437,9 +437,9 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
                     </div>
                     <div className="bg-muted/50 rounded-xl px-4 py-3">
                       <div className="flex gap-1.5">
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                       </div>
                     </div>
                   </div>
@@ -460,7 +460,7 @@ export function ChatInterface({ project, onBackToDashboard, onUpdateProject }: C
           isOpen={excelViewerOpen}
           onClose={handleCloseExcelViewer}
           file={currentFile}
-          workbookId={project.workbookId}
+          workbookId={project.sessionId}
         />
       )}
 

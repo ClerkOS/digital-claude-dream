@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { Input } from '@/components/ui/input';
-import { setCell as apiSetCell } from '@/lib/api/cells';
+import { setCell as apiSetCell } from '@/lib/api/v1/cells';
 
 // Minimal grid constants
 const CELL_WIDTH = 100;

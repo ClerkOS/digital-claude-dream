@@ -4,7 +4,7 @@ import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, RefreshCw, Layers, Lightbulb, Grid3x3 } from 'lucide-react';
-import { setCell as apiSetCell } from '@/lib/api/cells';
+import { setCell as apiSetCell } from '@/lib/api/v1/cells';
 
 // Grid constants
 const CELL_WIDTH = 100;

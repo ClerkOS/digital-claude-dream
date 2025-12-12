@@ -1,5 +1,5 @@
 import { API_ROOT, fetchWithRetry } from './config';
-import type { ApiResponse, WorkbookResponse, ImportWorkbookResponse } from '../../types/api';
+import type { ApiResponse, WorkbookResponse, ImportWorkbookResponse } from '../../../types/api';
 import { createSession, type SessionResponse } from './sessions';
 
 /**

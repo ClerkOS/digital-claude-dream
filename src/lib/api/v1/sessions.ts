@@ -5,7 +5,7 @@
  */
 
 import { API_ROOT, fetchWithRetry } from './config';
-import type { ApiResponse } from '../types/api';
+import type { ApiResponse } from '../../../types/api';
 
 export interface CreateSessionRequest {
   file: File;
