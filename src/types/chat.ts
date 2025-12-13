@@ -12,6 +12,14 @@ export interface Project {
   preview: string;
   messages: Message[];
   sessionId?: string;
+  suggestions?: Array<{
+    issue_type: string;
+    description: string;
+    suggested_fix: {
+      tool: string;
+      args: Record<string, any>;
+    };
+  }>;
   files: {
     name: string;
     size: number;
