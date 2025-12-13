@@ -11,7 +11,7 @@ import { DetachedSheetsRenderer } from '@/components/SheetTabs';
 import { Project } from '@/types/chat';
 import { STORAGE_KEYS, UPLOAD_CONFIG } from '@/constants';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { importWorkbook } from '@/lib/api/v1/workbook';
+
 import { useUploadAndAnalyze } from '@/hooks/useUploadAndAnalyze';
 import { u } from 'tar';
 import { set } from 'date-fns';
@@ -53,10 +53,10 @@ const Index = () => {
   const activeProject = projects.find(p => p.id === activeProjectId);
 
   useEffect(() => {
-  if (appState === 'pipeline') {
-    setPipelineState({ currentStep });
-  }
-}, [currentStep, appState]);
+    if (appState === 'pipeline') {
+      setPipelineState({ currentStep });
+    }
+  }, [currentStep, appState]);
 
   const handleFileUpload = async (files: any[]) => {
     if (files.length === 0) return;
@@ -75,7 +75,7 @@ const Index = () => {
     const progressInterval = UPLOAD_CONFIG.PROGRESS_INTERVAL;
     let currentProgress = 0;
 
-    const uploadTimer = setInterval(async() => {
+    const uploadTimer = setInterval(async () => {
       currentProgress += (progressInterval / uploadDuration) * 100;
 
       if (currentProgress >= 100) {
@@ -95,7 +95,7 @@ const Index = () => {
         // Start upload and analysis
         console.log('Uploading and analyzing file');
         (async () => {
-          try{
+          try {
             const { sessionId: newSessionId, suggestions } = await uploadAndAnalyze(file);
             console.log('Upload and analysis complete. Session ID:', newSessionId, 'Suggestions:', suggestions);
 
@@ -115,6 +115,7 @@ const Index = () => {
               messages: [],
               files: [fileMetadata],
               sessionId: newSessionId,
+              suggestions: suggestions, // Store suggestions in project
               lastActivity: 'Just now',
             }
 
@@ -122,7 +123,7 @@ const Index = () => {
             setActiveProjectId(newProject.id);
 
             // Update pipeline state to show analysis results
-            setPipelineState({currentStep: 'complete'});
+            setPipelineState({ currentStep: 'complete' });
             setAppState('dashboard');
 
           } catch (error) {
@@ -270,6 +271,7 @@ const Index = () => {
             >
               <SimpleRulesInterface
                 sessionId={activeProject.sessionId!}
+                suggestions={activeProject.suggestions}
               />
             </motion.div>
           ) : (
