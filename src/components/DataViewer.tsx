@@ -4,22 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
 import { fetchWithRetry } from '@/lib/api/v1/errorHandler';
+import type { SessionResponse, SessionDataResponse } from '@/types/v2/session';
 
 interface DataViewerProps {
   sessionId: string;
   onClose: () => void;
 }
 
-interface SessionData {
-  session_id: string;
-  total_rows: number;
-  preview_rows: number;
-  columns: Array<{ name: string; dtype: string }>;
-  data: Array<Record<string, any>>;
-}
-
 export function DataViewer({ sessionId, onClose }: DataViewerProps) {
-  const [sessionData, setSessionData] = useState<SessionData | null>(null);
+  const [sessionData, setSessionData] = useState<SessionDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,11 +20,11 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const apiRoot = import.meta.env.VITE_API_ROOT || 'http://localhost:8000';
+        const apiRoot = import.meta.env.VITE_API_ROOT || 'http://localhost:8000/api';
         const url = `${apiRoot}/sessions/${sessionId}/data`;
         
         // Use fetchWithRetry for proper error handling and CORS
-        const data = await fetchWithRetry<SessionData>(url);
+        const data = await fetchWithRetry<SessionDataResponse>(url);
         setSessionData(data);
       } catch (err: any) {
         console.error('Data fetch error:', err);
@@ -96,7 +89,7 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
             <div>
               <h2 className="text-lg font-semibold text-foreground">Data Preview</h2>
               <p className="text-xs text-muted-foreground">
-                Showing {sessionData.preview_rows} of {sessionData.total_rows.toLocaleString()} rows
+                Showing {sessionData.data.data.preview_rows} of {sessionData.data.data.total_rows.toLocaleString()} rows
               </p>
             </div>
           </div>
@@ -116,7 +109,7 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <TableIcon className="h-4 w-4" />
-                Data Rows ({sessionData.columns.length} columns)
+                Data Rows ({sessionData.data.data.columns.length} columns)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -127,7 +120,7 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
                       <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-r border-border">
                         #
                       </th>
-                      {sessionData.columns.map((column) => (
+                      {sessionData.data.data.columns.map((column) => (
                         <th 
                           key={column.name}
                           className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-r border-border last:border-r-0"
@@ -141,12 +134,12 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
                     </tr>
                   </thead>
                   <tbody className="bg-background divide-y divide-border">
-                    {sessionData.data.map((row, rowIndex) => (
+                    {sessionData.data.data.rows.map((row, rowIndex) => (
                       <tr key={rowIndex} className="hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 text-sm text-muted-foreground font-medium border-r border-border">
                           {rowIndex + 1}
                         </td>
-                        {sessionData.columns.map((column) => (
+                        {sessionData.data.data.columns.map((column) => (
                           <td 
                             key={column.name}
                             className="px-4 py-3 text-sm text-foreground border-r border-border last:border-r-0"
@@ -163,11 +156,11 @@ export function DataViewer({ sessionId, onClose }: DataViewerProps) {
                 </table>
               </div>
               
-              {sessionData.total_rows > sessionData.preview_rows && (
+              {sessionData.data.data.total_rows > sessionData.data.data.preview_rows && (
                 <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Note:</strong> Showing first {sessionData.preview_rows} rows. 
-                    {sessionData.total_rows - sessionData.preview_rows} more rows available.
+                    <strong>Note:</strong> Showing first {sessionData.data.data.preview_rows} rows. 
+                    {sessionData.data.data.total_rows - sessionData.data.data.preview_rows} more rows available.
                   </p>
                 </div>
               )}

@@ -11,10 +11,7 @@ import { DetachedSheetsRenderer } from '@/components/SheetTabs';
 import { Project } from '@/types/chat';
 import { STORAGE_KEYS, UPLOAD_CONFIG } from '@/constants';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-
 import { useUploadAndAnalyze } from '@/hooks/useUploadAndAnalyze';
-import { u } from 'tar';
-import { set } from 'date-fns';
 
 type AppState = 'empty' | 'dashboard' | 'chat' | 'uploading' | 'pipeline';
 

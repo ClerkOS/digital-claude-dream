@@ -1,6 +1,8 @@
+import { ApiResponse } from "../../types/v2/api";
+
 export interface AgentStep {
   step_index: number;
-  op: string;
+  tool: string;
   status: 'success' | 'failed';
   version: number;
   diff: Record<string, any>;
@@ -16,10 +18,23 @@ export interface AgentSchema {
   row_count: number;
 }
 
-export interface AgentResponse {
-  agent_goal: string;
-  execution_status: 'success' | 'failed';
-  steps: AgentStep[];
-  final_version: number;
+export type AgentResponse = ApiResponse<{
+  session_id: string;
+  execution: { 
+    agent_goal: string;
+    execution_status: 'success' | 'failed';
+    steps: AgentStep[];
+    final_version: number;
+  };
   schema: AgentSchema;
-}
+}>;
+
+export type SuggestionResponse = ApiResponse<{
+  session_id: string;
+  execution: {
+    status: string;
+    steps: AgentStep[];
+    final_version: number;
+  };
+  schema: AgentSchema;
+}>;

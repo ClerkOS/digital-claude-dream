@@ -1,3 +1,4 @@
+import { ApiResponse } from "../../types/v2/api";
 export interface SuggestionFix {
   tool: string;
   args: Record<string, any>;
@@ -9,8 +10,10 @@ export interface Suggestion {
   suggested_fix: SuggestionFix;
 }
 
-export interface AnalysisResponse {
+export type AnalysisResponse = ApiResponse<{
   session_id: string;
-  suggestions: Suggestion[];
-  suggestion_count: number;
-}
+  analysis: {
+    suggestion_count: number;
+    suggestions: Suggestion[];
+  };
+}>;

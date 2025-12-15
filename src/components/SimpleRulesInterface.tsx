@@ -13,7 +13,7 @@ import { DataViewer } from './DataViewer';
 import { processAgentRequest } from '@/lib/api/v2/agent';
 import { SuggestionsPanel } from './dashboard/SuggestionsPanel';
 import type { Suggestion } from '@/types/v2/analysis';
-import { applySuggestion } from '@/lib/api/v2/analysis';
+import { applySuggestion } from '@/lib/api/v2/suggestion';
 
 interface Rule {
   id: string;
@@ -21,7 +21,7 @@ interface Rule {
   timestamp: string;
   status: 'success' | 'failed';
   steps?: Array<{
-    op: string;
+    tool: string;
     status: string;
   }>;
 }
@@ -49,17 +49,18 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
 
   const loadSession = async () => {
     try {
-      const session = await getSession(sessionId);
-      console.log('Loaded session:', session);
-      setSessionData(session);
+      const result = await getSession(sessionId);
+      if (!result.ok) throw new Error('Failed to fetch session data');
+      console.log('Loaded session:', result);
+      setSessionData(result);
 
       // Convert history to rules format
-      const historyRules: Rule[] = session.history.map((item, index) => ({
+      const historyRules: Rule[] = result.data.session.history.map((item, index) => ({
         id: `rule-${index}`,
         request: item.step?.op || 'Unknown operation',
         timestamp: new Date().toISOString(),
         status: 'success',
-        steps: item.step ? [{ op: item.step.op, status: 'success' }] : [],
+        steps: item.step ? [{ tool: item.step.op, status: 'success' }] : [],
       }));
 
       setRules(historyRules);
@@ -77,6 +78,7 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
 
     try {
       const result = await processAgentRequest(sessionId, ruleInput.trim());
+      if (!result.ok) throw new Error('Agent execution failed');
       console.log('Agent execution result:', result);
 
       // Add to rules list
@@ -84,8 +86,8 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
         id: `rule-${Date.now()}`,
         request: ruleInput.trim(),
         timestamp: new Date().toISOString(),
-        status: result.execution_status === 'success' ? 'success' : 'failed',
-        steps: result.steps,
+        status: result.data.execution.execution_status === 'success' ? 'success' : 'failed',
+        steps: result.data.execution.steps,
       };
 
       setRules(prev => [newRule, ...prev]);
@@ -113,6 +115,7 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
 
     try {
       const result = await applySuggestion(sessionId, suggestion);
+      if (!result.ok) throw new Error('Failed to apply suggestion');
       console.log('Suggestion applied:', result);
 
       // Add to rules list
@@ -120,8 +123,8 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
         id: `rule-${Date.now()}`,
         request: suggestion.description,
         timestamp: new Date().toISOString(),
-        status: result.status === 'success' ? 'success' : 'failed',
-        steps: result.steps,
+        status: result.data.execution.status === 'success' ? 'success' : 'failed',
+        steps: result.data.execution.steps,
       };
 
       setRules(prev => [newRule, ...prev]);
@@ -162,8 +165,8 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
               <p className="text-sm text-muted-foreground">
                 {sessionData ? (
                   <>
-                    {sessionData.schema.row_count.toLocaleString()} rows •
-                    {sessionData.schema.columns.length} columns •
+                    {sessionData.data.session.schema.row_count.toLocaleString()} rows •
+                    {sessionData.data.session.schema.columns.length} columns •
                     {rules.length} rules applied
                   </>
                 ) : (
@@ -311,7 +314,7 @@ export function SimpleRulesInterface({ sessionId, suggestions = [] }: SimpleRule
                                 <div className="pl-6 space-y-1">
                                   {rule.steps.map((step, idx) => (
                                     <p key={idx} className="text-xs text-muted-foreground">
-                                      {step.status === 'success' ? '✓' : '✗'} {step.op}
+                                      {step.status === 'success' ? '✓' : '✗'} {step.tool}
                                     </p>
                                   ))}
                                 </div>

@@ -3,7 +3,6 @@ import { createSession } from "../lib/api/v2/sessions";
 import { runAnalysis } from "../lib/api/v2/analysis";
 import type { Suggestion } from "../types/v2/analysis";
 import { PipelineStep } from "@/components/DataPipelineProgress";
-import { c } from "tar";
 
 export function useUploadAndAnalyze() {
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -48,14 +47,19 @@ export function useUploadAndAnalyze() {
         // Step 1: creating session
         const session = await advanceStep('creating', async () => {
             const res = await createSession(file);
-            setSessionId(res.session_id);
+            if (!res.ok) throw new Error('Failed to create session');
+            console.log("Created session:", res.data.session_id);
+            setSessionId(res.data.session_id);
             return res;
         });
 
         // Step 2: running analysis
         const analysis = await advanceStep('analyzing', async () => {
-            if (!session) throw new Error('No session created');
-            return runAnalysis(session.session_id);
+            console.log("Running analysis for session:", session.data.session_id);
+            const res = await runAnalysis(session.data.session_id);
+            if (!res.ok) throw new Error('Analysis failed');
+            console.log("Analysis complete for session:", res);
+            return res;
         });
 
         // Step 3: suggesting (results stage)
@@ -63,11 +67,11 @@ export function useUploadAndAnalyze() {
 
         if (!analysis) throw new Error('Analysis failed');
 
-        setSuggestions(analysis.suggestions);
+        setSuggestions(analysis.data.analysis.suggestions);
 
         return {
-            sessionId: session!.session_id,
-            suggestions: analysis.suggestions,
+            sessionId: session!.data.session_id,
+            suggestions: analysis.data.analysis.suggestions,
         };
     }
 
